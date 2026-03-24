@@ -86,7 +86,7 @@
             <div class="col-md-4">
                 <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Pendientes</div>
-                    <div class="fw-bold fs-3 text-danger">{{ resumen_estados.pendientes|default:0 }}</div>
+                    <div class="fw-bold fs-3 text-danger">{{ resumen_estados.pendientes_count|default:0 }}</div>
                     <div class="small text-muted">Compromisos sin abonos registrados</div>
                 </div>
             </div>
@@ -94,7 +94,7 @@
             <div class="col-md-4">
                 <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Parciales</div>
-                    <div class="fw-bold fs-3 text-warning">{{ resumen_estados.parciales|default:0 }}</div>
+                    <div class="fw-bold fs-3 text-warning">{{ resumen_estados.parciales_count|default:0 }}</div>
                     <div class="small text-muted">Compromisos con abonos pero con saldo pendiente</div>
                 </div>
             </div>
@@ -102,7 +102,7 @@
             <div class="col-md-4">
                 <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Pagados</div>
-                    <div class="fw-bold fs-3 text-success">{{ resumen_estados.pagados|default:0 }}</div>
+                    <div class="fw-bold fs-3 text-success">{{ resumen_estados.pagados_count|default:0 }}</div>
                     <div class="small text-muted">Compromisos completamente pagados</div>
                 </div>
             </div>
