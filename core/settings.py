@@ -8,6 +8,9 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-only-key')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['.onrender.com', 'localhost', '127.0.0.1']
+CSRF_TRUSTED_ORIGINS = [
+    "https://sistema-pagos-finanzas.onrender.com"
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -98,3 +101,5 @@ ALERTAS_URGENTES_DIAS = 2
 ALERTAS_EMAIL_LIMITE_EVENTOS = 200
 ALERTAS_EMAIL_ASUNTO = 'Alerta financiera urgente'
 ALERTAS_AUTOMATICAS_ACTIVAS = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
