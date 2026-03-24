@@ -1,0 +1,51 @@
+.report-card {
+    background: white;
+    border-radius: 18px;
+    padding: 26px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.05);
+    margin-bottom: 26px;
+}
+
+.filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filters .form-control {
+    max-width: 200px;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.kpi {
+    background: #f9fafb;
+    border-radius: 16px;
+    padding: 18px;
+}
+
+.kpi-title {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.kpi-value {
+    font-size: 24px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+.table-exec th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #6b7280;
+}
+
+.table-exec td {
+    vertical-align: middle;
+}

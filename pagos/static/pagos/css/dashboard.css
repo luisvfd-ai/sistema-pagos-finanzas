@@ -1,0 +1,160 @@
+:root {
+    --bg: #b4c6f5;
+    --card: #e6e3e3;
+    --primary: #4f46e5;
+    --primary-soft: #eef2ff;
+    --success: #16a34a;
+    --success-soft: #dcfce7;
+    --warning: #f59e0b;
+    --warning-soft: #fef3c7;
+    --danger: #dc2626;
+    --danger-soft: #fee2e2;
+    --text: #1f2937;
+    --muted: #6b7280;
+}
+
+body {
+    /* dejamos un fondo consistente (antes se pisaban entre sí) */
+    background-color: #6b7280;
+}
+
+.dashboard-wrapper {
+    max-width: 1400px;
+    margin: auto;
+    padding: 12px 16px;
+}
+
+.header {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: white;
+    padding: 26px 30px;
+    border-radius: 18px;
+    margin-bottom: 26px;
+    box-shadow: 0 10px 25px rgba(79,70,229,.25);
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.header span {
+    font-size: 14px;
+    opacity: .9;
+}
+
+/* grid más flexible (ideal para 6-8 KPIs sin romper el layout) */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+    margin-bottom: 26px;
+}
+
+.kpi {
+    background: var(--card);
+    padding: 22px 22px;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.05);
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.kpi:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0,0,0,.08);
+}
+
+.kpi-title {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.kpi-value {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.kpi small {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.section {
+    background: var(--card);
+    padding: 26px 26px;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.05);
+    margin-bottom: 26px;
+}
+
+.section h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.chart-container {
+    height: 340px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 40px;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* ojo: tus clases en HTML usan riesgo|lower => alto/medio/bajo */
+.riesgo-alto {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.riesgo-medio {
+    background: var(--warning-soft);
+    color: var(--warning);
+}
+
+.riesgo-bajo {
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    padding: 12px 8px;
+}
+
+tbody td {
+    padding: 14px 8px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+tbody tr:hover {
+    background: #fafafa;
+}
+
+.alert {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.ok {
+    color: var(--success);
+    font-weight: 700;
+    padding: 12px 4px;
+}

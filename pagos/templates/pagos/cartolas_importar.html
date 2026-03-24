@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Importar cartola{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <h3 class="mb-4">🏦 Importar cartola bancaria</h3>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <p class="text-muted">
+                Sube un <strong>CSV</strong> o <strong>XLSX</strong>. El sistema guardará movimientos históricos y deduplicará por hash.
+            </p>
+
+            <form method="post" enctype="multipart/form-data" class="row g-3">
+                {% csrf_token %}
+
+                <div class="col-12">
+                    <label class="form-label">Archivo</label>
+                    {{ form.archivo }}
+                    <small class="text-muted">CSV o XLSX</small>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Banco (opcional)</label>
+                    {{ form.banco }}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Cuenta (opcional)</label>
+                    {{ form.cuenta }}
+                </div>
+
+                <hr class="mt-3">
+
+                <h6 class="mt-2">🧩 Mapeo de columnas (para distintos bancos)</h6>
+
+                <div class="col-md-4">
+                    <label class="form-label">Columna fecha</label>
+                    {{ form.col_fecha }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Columna descripción</label>
+                    {{ form.col_descripcion }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Columna monto</label>
+                    {{ form.col_monto }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Columna referencia (opcional)</label>
+                    {{ form.col_referencia }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Columna tipo (opcional)</label>
+                    {{ form.col_tipo }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Separador CSV</label>
+                    {{ form.separador_csv }}
+                </div>
+
+                <div class="col-12 d-flex gap-2 justify-content-end mt-2">
+                    <a href="{% url 'cartolas_lista' %}" class="btn btn-outline-secondary">Ver movimientos</a>
+                    <button class="btn btn-primary">📥 Importar</button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

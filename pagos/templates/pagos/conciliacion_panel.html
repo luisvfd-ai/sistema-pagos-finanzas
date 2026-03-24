@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% load money_filters %}
+
+{% block title %}Conciliación bancaria{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">📊 Panel de conciliación bancaria</h3>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="{% url 'cartolas_lista' %}">🏦 Ver cartolas</a>
+            <a class="btn btn-outline-dark" href="{% url 'cartolas_sugerencias' %}">🧠 Ver sugerencias</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Total movimientos</div>
+                    <div class="fs-4 fw-bold">{{ total_movimientos }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-success">
+                <div class="card-body">
+                    <div class="text-muted small">Conciliados</div>
+                    <div class="fs-4 fw-bold text-success">{{ total_conciliados }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-warning">
+                <div class="card-body">
+                    <div class="text-muted small">Pendientes</div>
+                    <div class="fs-4 fw-bold text-warning">{{ total_pendientes }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-primary">
+                <div class="card-body">
+                    <div class="text-muted small">% conciliación</div>
+                    <div class="fs-4 fw-bold text-primary">{{ porcentaje_conciliacion }}%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Pagos reales</div>
+                    <div class="fs-4 fw-bold">{{ total_pagos_reales }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body">
+                    <div class="text-muted small">Pagos sin movimiento</div>
+                    <div class="fs-4 fw-bold text-danger">{{ pagos_sin_movimiento_count }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-success">
+                <div class="card-body">
+                    <div class="text-muted small">Monto conciliado</div>
+                    <div class="fs-4 fw-bold text-success">{{ monto_conciliado|clp }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-warning">
+                <div class="card-body">
+                    <div class="text-muted small">Monto pendiente</div>
+                    <div class="fs-4 fw-bold text-warning">{{ monto_pendiente|clp }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <strong>✅ Últimos movimientos conciliados</strong>
+                </div>
+                <div class="card-body">
+                    {% if conciliados_recientes %}
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Descripción</th>
+                                        <th class="text-end">Monto</th>
+                                        <th>Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mov in conciliados_recientes %}
+                                    <tr>
+                                        <td>{{ mov.fecha }}</td>
+                                        <td>{{ mov.descripcion }}</td>
+                                        <td class="text-end">{{ mov.monto|clp }}</td>
+                                        <td>
+                                            {% if mov.pago_real %}
+                                                {{ mov.pago_real.pago.nombre }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-muted">Aún no hay movimientos conciliados.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <strong>⏳ Últimos movimientos pendientes</strong>
+                </div>
+                <div class="card-body">
+                    {% if pendientes_recientes %}
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Descripción</th>
+                                        <th class="text-end">Monto</th>
+                                        <th>Tipo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mov in pendientes_recientes %}
+                                    <tr>
+                                        <td>{{ mov.fecha }}</td>
+                                        <td>{{ mov.descripcion }}</td>
+                                        <td class="text-end">{{ mov.monto|clp }}</td>
+                                        <td>{{ mov.tipo }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-muted">No hay pendientes.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white">
+            <strong>🔎 Pagos internos sin reflejo bancario</strong>
+        </div>
+        <div class="card-body">
+            {% if pagos_sin_movimiento %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha pago</th>
+                                <th>Compromiso</th>
+                                <th class="text-end">Monto</th>
+                                <th>Método</th>
+                                <th>Observación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in pagos_sin_movimiento %}
+                            <tr>
+                                <td>{{ p.fecha_pago }}</td>
+                                <td>{{ p.pago.nombre }}</td>
+                                <td class="text-end">{{ p.monto|clp }}</td>
+                                <td>{{ p.metodo_pago }}</td>
+                                <td>{{ p.observacion|default:"—" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-muted">No hay pagos internos sin movimiento bancario asociado.</div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

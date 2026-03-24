@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Sugerencias de conciliación{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">🧠 Sugerencias de conciliación</h3>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="{% url 'cartolas_lista' %}">⬅ Ver cartolas</a>
+            <a class="btn btn-outline-dark" href="{% url 'conciliacion_panel' %}">📊 Panel conciliación</a>
+            <a class="btn btn-primary" href="{% url 'cartolas_importar' %}">📥 Importar</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form class="row g-2" method="get">
+                <div class="col-md-3">
+                    <label class="form-label">Desde</label>
+                    <input type="date" class="form-control" name="desde" value="{{ desde|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" class="form-control" name="hasta" value="{{ hasta|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Límite</label>
+                    <input type="number" class="form-control" name="limite" value="{{ limite }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="soloPend" name="solo_pendientes" {% if solo_pendientes %}checked{% endif %}>
+                        <label class="form-check-label" for="soloPend">Solo pendientes</label>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-outline-primary w-100">Generar</button>
+                </div>
+            </form>
+
+            <small class="text-muted d-block mt-2">
+                Matching por <strong>monto</strong>, cercanía de <strong>fecha</strong> y similitud de <strong>texto</strong>.
+            </small>
+        </div>
+    </div>
+
+    {% if not mov_id %}
+    <div class="card shadow-sm border-success mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <h5 class="mb-1">⚡ Auto-conciliación inteligente</h5>
+                    <div class="text-muted small">
+                        Conciliará automáticamente coincidencias fuertes y evitará usar el mismo pago en más de un movimiento.
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" action="{% url 'cartolas_auto_conciliar' %}" class="row g-3 mt-1">
+                {% csrf_token %}
+
+                <div class="col-md-2">
+                    <label class="form-label">Score mínimo</label>
+                    {{ auto_form.score_minimo }}
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Límite</label>
+                    {{ auto_form.limite }}
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Desde</label>
+                    {{ auto_form.desde }}
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Hasta</label>
+                    {{ auto_form.hasta }}
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="form-check">
+                        {{ auto_form.solo_pendientes }}
+                        <label class="form-check-label" for="{{ auto_form.solo_pendientes.id_for_label }}">
+                            Solo pendientes
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-12 d-flex justify-content-end">
+                    <button
+                        class="btn btn-success"
+                        onclick="return confirm('¿Deseas ejecutar la auto-conciliación con estos criterios?');">
+                        ✅ Auto-conciliar coincidencias fuertes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if sugerencias %}
+        {% for item in sugerencias %}
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div>
+                            <div class="fw-bold">
+                                {{ item.mov.fecha }} — ${{ item.mov.monto|floatformat:0 }}
+
+                                {% if item.mov.tipo == "cargo" %}
+                                    <span class="badge bg-danger ms-2">Cargo</span>
+                                {% elif item.mov.tipo == "abono" %}
+                                    <span class="badge bg-success ms-2">Abono</span>
+                                {% else %}
+                                    <span class="badge bg-secondary ms-2">Sin clasificar</span>
+                                {% endif %}
+
+                                {% if item.mov.conciliado %}
+                                    <span class="badge bg-success ms-2">Conciliado</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="text-muted">{{ item.mov.descripcion }}</div>
+
+                            {% if item.mov.referencia %}
+                                <div class="small text-muted">Ref: {{ item.mov.referencia }}</div>
+                            {% endif %}
+
+                            {% if item.mov.banco or item.mov.cuenta %}
+                                <div class="small text-muted">
+                                    {{ item.mov.banco|default:"—" }} / {{ item.mov.cuenta|default:"—" }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Score</th>
+                                    <th>Fecha pago</th>
+                                    <th>Compromiso</th>
+                                    <th class="text-end">Monto</th>
+                                    <th>Método</th>
+                                    <th>Obs</th>
+                                    <th class="text-end">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in item.candidatos %}
+                                <tr>
+                                    <td>
+                                        {% if c.score >= 85 %}
+                                            <span class="badge bg-success">{{ c.score }}</span>
+                                        {% elif c.score >= 70 %}
+                                            <span class="badge bg-warning text-dark">{{ c.score }}</span>
+                                        {% else %}
+                                            <span class="badge bg-dark">{{ c.score }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ c.pago.fecha_pago }}</td>
+                                    <td>{{ c.pago.pago.nombre }}</td>
+                                    <td class="text-end">${{ c.pago.monto|floatformat:0 }}</td>
+                                    <td>{{ c.pago.metodo_pago }}</td>
+                                    <td style="max-width: 320px;">{{ c.pago.observacion|default:"—" }}</td>
+                                    <td class="text-end">
+                                        <form method="post" action="{% url 'cartolas_conciliar' %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="mov_id" value="{{ item.mov.id }}">
+                                            <input type="hidden" name="pago_real_id" value="{{ c.pago.id }}">
+                                            <input type="hidden" name="next" value="cartolas_lista">
+                                            <input type="hidden" name="nota" value="Conciliado desde sugerencias (score {{ c.score }})">
+                                            <button class="btn btn-sm btn-success">
+                                                ✅ Conciliar
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-2 text-muted small">
+                        Tip: la auto-conciliación está pensada principalmente para <strong>cargos</strong>. Los abonos normalmente requieren otra lógica.
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-muted">
+                No hay sugerencias aún. Ajusta rango/límite o importa más movimientos.
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

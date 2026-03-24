@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Importar deudas desde Excel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <h3 class="mb-0">📥 Importación masiva desde Excel</h3>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'importaciones_historial' %}" class="btn btn-outline-dark">
+                <i class="fas fa-history me-1"></i> Historial importaciones
+            </a>
+            <a href="{% url 'pagos_importar_excel_limpiar_preview' %}?next=pagos_lista" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <p class="mb-2">
+                Este importador está adaptado a tu estructura de archivo:
+            </p>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <a href="{% url 'descargar_plantilla_importacion' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-file-excel me-1"></i> Descargar plantilla Excel
+                </a>
+
+                <a href="{% url 'descargar_guia_importacion' %}" class="btn btn-outline-danger">
+                    <i class="fas fa-file-pdf me-1"></i> Descargar guía PDF
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-3">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Columna</th>
+                            <th>Uso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>id_deuda</strong></td><td>Referencia interna del Excel</td></tr>
+                        <tr><td><strong>FECHA DE PAGO</strong></td><td>Fecha base de la deuda / pago</td></tr>
+                        <tr><td><strong>DESCRIPCION</strong></td><td>Nombre del compromiso</td></tr>
+                        <tr><td><strong>TIPO</strong></td><td>Texto auxiliar del Excel</td></tr>
+                        <tr><td><strong>MONTO</strong></td><td>Monto principal</td></tr>
+                        <tr><td><strong>PAGADO</strong></td><td>Si existe, crea PagoReal</td></tr>
+                        <tr><td><strong>SALDOS</strong></td><td>Se guarda como referencia descriptiva</td></tr>
+                        <tr><td><strong>CUOTAS</strong></td><td>Ej: 3/6, 2/10, 5/24</td></tr>
+                        <tr><td><strong>tipo de pago</strong></td><td>Ayuda a inferir frecuencia</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mb-0">
+                El sistema omitirá filas vacías, subtotales y líneas tipo <strong>TOTAL SEMANA</strong> o <strong>TOTAL Vencidas</strong>.
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Archivo Excel / CSV</label>
+                        {{ form.archivo }}
+                        {% if form.archivo.errors %}
+                            <div class="text-danger small mt-1">{{ form.archivo.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Hoja (opcional)</label>
+                        {{ form.hoja }}
+                        {% if form.hoja.errors %}
+                            <div class="text-danger small mt-1">{{ form.hoja.errors|join:", " }}</div>
+                        {% endif %}
+                        <small class="text-muted">Si la dejas vacía, se usará la hoja activa.</small>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check">
+                            {{ form.crear_pagos_reales }}
+                            <label class="form-check-label" for="{{ form.crear_pagos_reales.id_for_label }}">
+                                Crear pagos reales automáticamente desde la columna <strong>PAGADO</strong>
+                            </label>
+                        </div>
+                        {% if form.crear_pagos_reales.errors %}
+                            <div class="text-danger small mt-1">{{ form.crear_pagos_reales.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'pagos_importar_excel_limpiar_preview' %}?next=pagos_lista" class="btn btn-light">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i> Analizar archivo
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    {% if preview_data %}
+    <div class="card shadow-sm mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">🧠 Vista previa de importación</h5>
+        </div>
+        <div class="card-body">
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Archivo</div>
+                        <div class="fw-bold">{{ preview_data.archivo_nombre }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Hoja</div>
+                        <div class="fw-bold">{{ preview_data.hoja|default:"Hoja activa" }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Crear pagos reales</div>
+                        <div class="fw-bold">
+                            {% if preview_data.crear_pagos_reales %}Sí{% else %}No{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Filas procesadas</div>
+                        <div class="fw-bold">{{ preview_data.resumen.filas_procesadas }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-2">
+                    <div class="border rounded p-3 text-center h-100">
+                        <div class="text-muted small">Deudas nuevas</div>
+                        <div class="fs-4 fw-bold text-primary">{{ preview_data.resumen.deudas_nuevas }}</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="border rounded p-3 text-center h-100">
+                        <div class="text-muted small">Deudas existentes</div>
+                        <div class="fs-4 fw-bold">{{ preview_data.resumen.deudas_existentes }}</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="border rounded p-3 text-center h-100">
+                        <div class="text-muted small">Pagos nuevos</div>
+                        <div class="fs-4 fw-bold text-success">{{ preview_data.resumen.pagos_nuevos }}</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="border rounded p-3 text-center h-100">
+                        <div class="text-muted small">Pagos existentes</div>
+                        <div class="fs-4 fw-bold">{{ preview_data.resumen.pagos_existentes }}</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="border rounded p-3 text-center h-100">
+                        <div class="text-muted small">Omitidas</div>
+                        <div class="fs-4 fw-bold text-warning">{{ preview_data.resumen.omitidas }}</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="border rounded p-3 text-center h-100">
+                        <div class="text-muted small">Errores</div>
+                        <div class="fs-4 fw-bold text-danger">{{ preview_data.resumen.errores }}</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if preview_data.resumen.fechas_estimadas > 0 %}
+            <div class="alert alert-warning">
+                <strong>Atención:</strong> se estimó fecha automáticamente para
+                <strong>{{ preview_data.resumen.fechas_estimadas }}</strong> fila(s).
+            </div>
+            {% endif %}
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div>
+                    <strong>Primeras filas interpretadas</strong>
+                    <div class="text-muted small">
+                        Se muestran hasta 50 filas como muestra antes de confirmar.
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a href="{% url 'pagos_importar_excel_limpiar_preview' %}?next=pagos_importar_excel" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i> Cancelar preview
+                    </a>
+
+                    <form method="post" action="{% url 'pagos_importar_excel_confirmar' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i> Confirmar importación
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fila</th>
+                            <th>Descripción</th>
+                            <th>Fecha</th>
+                            <th class="text-end">Monto</th>
+                            <th class="text-end">Pagado</th>
+                            <th>Cuotas</th>
+                            <th>Tipo</th>
+                            <th>Frecuencia</th>
+                            <th>Estado deuda</th>
+                            <th>Estado pago</th>
+                            <th>Motivo / nota</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in preview_data.preview_rows %}
+                        <tr>
+                            <td>{{ row.fila }}</td>
+                            <td>{{ row.descripcion }}</td>
+                            <td>{{ row.fecha_inicio }}</td>
+                            <td class="text-end">${{ row.monto }}</td>
+                            <td class="text-end">${{ row.pagado }}</td>
+                            <td>{{ row.cuotas_texto }}</td>
+                            <td>{{ row.tipo }}</td>
+                            <td>{{ row.frecuencia }}</td>
+                            <td>
+                                {% if row.estado_deuda == 'Nueva' %}
+                                    <span class="badge bg-primary">Nueva</span>
+                                {% elif row.estado_deuda == 'Existente BD' %}
+                                    <span class="badge bg-secondary">Existente BD</span>
+                                {% elif row.estado_deuda == 'Repetida en archivo' %}
+                                    <span class="badge bg-dark">Repetida archivo</span>
+                                {% elif row.estado_deuda == 'Omitida' %}
+                                    <span class="badge bg-warning text-dark">Omitida</span>
+                                {% elif row.estado_deuda == 'Error' %}
+                                    <span class="badge bg-danger">Error</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">{{ row.estado_deuda }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if row.estado_pago == 'Nuevo' %}
+                                    <span class="badge bg-success">Nuevo</span>
+                                {% elif row.estado_pago == 'Existente BD' %}
+                                    <span class="badge bg-secondary">Existente BD</span>
+                                {% elif row.estado_pago == 'Repetido en archivo' %}
+                                    <span class="badge bg-dark">Repetido archivo</span>
+                                {% else %}
+                                    <span class="text-muted">{{ row.estado_pago }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ row.motivo }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-3 d-flex flex-wrap justify-content-end gap-2">
+                <a href="{% url 'pagos_importar_excel_limpiar_preview' %}?next=pagos_importar_excel" class="btn btn-outline-secondary">
+                    Analizar otro archivo
+                </a>
+
+                <form method="post" action="{% url 'pagos_importar_excel_confirmar' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-1"></i> Confirmar importación
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

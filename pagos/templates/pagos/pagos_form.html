@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo|default:"Nuevo pago" }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pagos/css/forms.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <h3 class="mb-4">
+        {% if titulo %}
+            {{ titulo }}
+        {% else %}
+            ➕ Registrar nuevo pago
+        {% endif %}
+    </h3>
+
+    {% if modo_edicion and pago_obj %}
+        <div class="alert alert-warning">
+            <strong>Atención:</strong> estás editando una deuda existente.
+            Si esta deuda ya tiene pagos registrados o eventos asociados,
+            revisa luego saldos, cuotas y proyecciones.
+        </div>
+    {% endif %}
+
+    <div class="form-card">
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="row g-3">
+
+                <div class="col-md-8">
+                    <label class="form-label">Nombre / Concepto</label>
+                    {{ form.nombre }}
+                    {% if form.nombre.errors %}
+                        <div class="text-danger small mt-1">{{ form.nombre.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Tipo</label>
+                    {{ form.tipo }}
+                    {% if form.tipo.errors %}
+                        <div class="text-danger small mt-1">{{ form.tipo.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Monto</label>
+                    {{ form.monto }}
+                    {% if form.monto.errors %}
+                        <div class="text-danger small mt-1">{{ form.monto.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Fecha inicio</label>
+                    {{ form.fecha_inicio }}
+                    {% if form.fecha_inicio.errors %}
+                        <div class="text-danger small mt-1">{{ form.fecha_inicio.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Frecuencia</label>
+                    {{ form.frecuencia }}
+                    {% if form.frecuencia.errors %}
+                        <div class="text-danger small mt-1">{{ form.frecuencia.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Total cuotas</label>
+                    {{ form.total_cuotas }}
+                    {% if form.total_cuotas.errors %}
+                        <div class="text-danger small mt-1">{{ form.total_cuotas.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Cuotas restantes</label>
+                    {{ form.cuotas_restantes }}
+                    {% if form.cuotas_restantes.errors %}
+                        <div class="text-danger small mt-1">{{ form.cuotas_restantes.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Descripción</label>
+                    {{ form.descripcion }}
+                    {% if form.descripcion.errors %}
+                        <div class="text-danger small mt-1">{{ form.descripcion.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check">
+                        {{ form.activo }}
+                        <label class="form-check-label" for="{{ form.activo.id_for_label }}">
+                            Deuda activa
+                        </label>
+                    </div>
+                    {% if form.activo.errors %}
+                        <div class="text-danger small mt-1">{{ form.activo.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'pagos_lista' %}" class="btn btn-light">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if modo_edicion %}
+                        Guardar cambios
+                    {% else %}
+                        Guardar pago
+                    {% endif %}
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

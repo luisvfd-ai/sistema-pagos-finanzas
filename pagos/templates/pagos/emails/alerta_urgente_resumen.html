@@ -1,0 +1,110 @@
+{% load money_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerta financiera urgente</title>
+</head>
+<body style="margin:0; padding:0; background:#f3f4f6; font-family:Arial, sans-serif; color:#1f2937;">
+
+    <div style="max-width:900px; margin:0 auto; padding:24px;">
+        <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+
+            <div style="background:#b91c1c; color:#ffffff; padding:24px 28px;">
+                <div style="font-size:12px; letter-spacing:.08em; text-transform:uppercase; opacity:.9;">
+                    Sistema de Gestion Financiera
+                </div>
+                <h1 style="margin:8px 0 0 0; font-size:26px; line-height:1.2;">
+                     Alerta financiera urgente
+                </h1>
+                <p style="margin:10px 0 0 0; font-size:14px; color:#fee2e2;">
+                    Resumen de compromisos vencidos y compromisos que vencen en maximo {{ dias_urgentes }} dia(s), calculados por <strong>saldo pendiente real</strong>.
+                </p>
+            </div>
+
+            <div style="padding:24px 28px;">
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:22px;">
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Total urgente</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">{{ resumen.total_compromisos }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Saldo pendiente total</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">{{ resumen.total_saldo_pendiente|clp }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Vencidas</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">
+                            {{ resumen.vencidas_count }} / {{ resumen.vencidas_saldo|clp }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Vencen hoy</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">
+                            {{ resumen.hoy_count }} /  {{ resumen.hoy_saldo|clp }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Proximas hasta {{ dias_urgentes }} dia(s)</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">
+                            {{ resumen.proximas_count }} / {{ resumen.proximas_saldo|clp }}
+                        </td>
+                    </tr>
+                </table>
+
+                <div style="margin-bottom:14px;">
+                    <h3 style="margin:0 0 6px 0; font-size:18px; color:#111827;">Detalle de compromisos criticos</h3>
+                    <p style="margin:0; font-size:13px; color:#6b7280;">
+                        Se listan primero los compromisos mas delicados para revision inmediata.
+                    </p>
+                </div>
+
+                <table style="border-collapse:collapse; width:100%;">
+                    <thead>
+                        <tr style="background:#111827; color:#ffffff;">
+                            <th style="padding:10px; border:1px solid #d1d5db; text-align:left; width:120px;">Fecha</th>
+                            <th style="padding:10px; border:1px solid #d1d5db; text-align:left;">Concepto</th>
+                            <th style="padding:10px; border:1px solid #d1d5db; text-align:right; width:150px;">Pagado</th>
+                            <th style="padding:10px; border:1px solid #d1d5db; text-align:right; width:170px;">Saldo pendiente</th>
+                            <th style="padding:10px; border:1px solid #d1d5db; text-align:left; width:130px;">Prioridad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in eventos %}
+                        <tr style="background: {{ e.prioridad_fila_bg }};">
+                            <td style="padding:9px; border:1px solid #e5e7eb;">{{ e.fecha|date:"d-m-Y" }}</td>
+                            <td style="padding:9px; border:1px solid #e5e7eb;">
+                                <div style="font-weight:bold; margin-bottom:2px;">{{ e.nombre }}</div>
+                                {% if e.cantidad_eventos_pendientes %}
+                                <div style="font-size:12px; color:#6b7280;">Cuotas/eventos pendientes: {{ e.cantidad_eventos_pendientes }}</div>
+                                {% endif %}
+                            </td>
+                            <td style="padding:9px; border:1px solid #e5e7eb; text-align:right;">{{ e.pagado_acumulado|clp }}</td>
+                            <td style="padding:9px; border:1px solid #e5e7eb; text-align:right; font-weight:bold;">{{ e.saldo_pendiente_real|clp }}</td>
+                            <td style="padding:9px; border:1px solid #e5e7eb;">
+                                <span style="display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:bold; background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                    {{ e.prioridad_label }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="padding:10px; border:1px solid #e5e7eb; text-align:center; color:#6b7280;">
+                                No hay alertas urgentes.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div style="margin-top:20px; padding-top:14px; border-top:1px solid #e5e7eb; color:#6b7280; font-size:12px;">
+                    Generado el {{ fecha_generacion|date:"d-m-Y H:i" }}.
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

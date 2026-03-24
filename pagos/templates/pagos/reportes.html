@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% load static %}
+{% load money_filters %}
+
+{% block title %}Reportes financieros{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pagos/css/reportes.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container-fluid">
+
+    <h3 class="mb-4">📈 Reportes financieros ejecutivos</h3>
+
+    <div class="report-card">
+        <form method="post" class="filters">
+            {% csrf_token %}
+
+            <div>
+                <label class="form-label">Desde</label>
+                <input
+                    type="date"
+                    name="fecha_desde"
+                    class="form-control"
+                    value="{{ desde|date:'Y-m-d' }}"
+                    required
+                >
+            </div>
+
+            <div>
+                <label class="form-label">Hasta</label>
+                <input
+                    type="date"
+                    name="fecha_hasta"
+                    class="form-control"
+                    value="{{ hasta|date:'Y-m-d' }}"
+                    required
+                >
+            </div>
+
+            <div class="d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary">
+                    Generar reporte
+                </button>
+            </div>
+        </form>
+
+        <small class="text-muted d-block mt-2">
+            Tip: usa rangos cortos (7 a 30 días) para ver tendencias con más claridad.
+        </small>
+    </div>
+
+    {% if request.method != "POST" %}
+        <div class="report-card">
+            <p class="text-muted mb-0">
+                Selecciona un rango de fechas y presiona <strong>Generar reporte</strong>.
+            </p>
+        </div>
+    {% else %}
+
+        {% if eventos and eventos|length > 0 %}
+
+            <div class="report-card">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <strong>Exportar:</strong>
+                        <span class="text-muted">usa para respaldo histórico / cartolas</span>
+                    </div>
+
+                    <div class="btn-group">
+                        <a class="btn btn-outline-secondary"
+                           href="?export=csv&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}">
+                            CSV
+                        </a>
+                        <a class="btn btn-outline-secondary"
+                           href="?export=xlsx&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}">
+                            Excel
+                        </a>
+                        <a class="btn btn-outline-secondary"
+                           href="?export=pdf&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}">
+                            PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kpi-grid mb-4">
+                <div class="kpi">
+                    <div class="kpi-title">Total período</div>
+                    <div class="kpi-value">{{ total|clp }}</div>
+                    <small>{{ desde|date:"d-m-Y" }} → {{ hasta|date:"d-m-Y" }}</small>
+                </div>
+
+                <div class="kpi">
+                    <div class="kpi-title">Cantidad pagos</div>
+                    <div class="kpi-value">{{ eventos|length }}</div>
+                    <small>Pagos reales registrados</small>
+                </div>
+
+                <div class="kpi">
+                    <div class="kpi-title">Promedio por pago</div>
+                    <div class="kpi-value">{{ promedio|clp }}</div>
+                    <small>Total / cantidad</small>
+                </div>
+
+                <div class="kpi">
+                    <div class="kpi-title">Método principal</div>
+                    <div class="kpi-value">{{ metodo_principal|default:"—" }}</div>
+                    <small>Mayor monto acumulado</small>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-xl-7">
+                    <div class="report-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0">📅 Evolución diaria (total pagado por día)</h5>
+                            <small class="text-muted">Suma por fecha_pago</small>
+                        </div>
+
+                        <script id="report-diario-data" type="application/json">{{ chart_diario_json|default:"{}"|safe }}</script>
+
+                        <div style="height: 320px;">
+                            <canvas id="chartDiario"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-5">
+                    <div class="report-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0">💳 Distribución por método</h5>
+                            <small class="text-muted">Suma por metodo_pago</small>
+                        </div>
+
+                        <script id="report-metodo-data" type="application/json">{{ chart_metodo_json|default:"{}"|safe }}</script>
+
+                        <div style="height: 320px;">
+                            <canvas id="chartMetodo"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-card mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">🏆 Top compromisos del período</h5>
+                    <small class="text-muted">Top 3 por monto pagado</small>
+                </div>
+
+                {% if top_compromisos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-exec mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Compromiso</th>
+                                    <th class="text-end">Total pagado</th>
+                                    <th class="text-end">Cantidad pagos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in top_compromisos %}
+                                <tr>
+                                    <td>{{ item.nombre }}</td>
+                                    <td class="text-end">{{ item.total|clp }}</td>
+                                    <td class="text-end">{{ item.cantidad }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No hay suficientes datos para ranking.</p>
+                {% endif %}
+            </div>
+
+            <div class="report-card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">📋 Detalle de pagos</h5>
+                    <small class="text-muted">Ordenado por fecha</small>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-exec">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Compromiso</th>
+                                <th class="text-end">Monto</th>
+                                <th>Método</th>
+                                <th>Observación</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for e in eventos %}
+                            <tr>
+                                <td>{{ e.fecha_pago|date:"d-m-Y" }}</td>
+                                <td>{{ e.pago.nombre }}</td>
+                                <td class="text-end">{{ e.monto|clp }}</td>
+                                <td>{{ e.metodo_pago }}</td>
+                                <td style="max-width: 420px;">
+                                    {{ e.observacion|default:"—" }}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'pagos_real_editar' e.id %}?next=reportes_financieros"
+                                       class="btn btn-sm btn-outline-warning">
+                                        <i class="fas fa-pen me-1"></i> Editar
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+
+                        <tfoot>
+                            <tr>
+                                <th colspan="2">TOTAL</th>
+                                <th class="text-end">{{ total|clp }}</th>
+                                <th colspan="3"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <script>
+            (function () {
+                function safeParse(id) {
+                    const el = document.getElementById(id);
+                    if (!el) return null;
+                    const raw = (el.textContent || '').trim();
+                    if (!raw || raw === '{}' || raw === 'null' || raw === 'undefined') return null;
+                    try { return JSON.parse(raw); } catch (e) { return null; }
+                }
+
+                const diario = safeParse('report-diario-data');
+                const ctxDiario = document.getElementById('chartDiario');
+
+                if (diario && ctxDiario && Array.isArray(diario.labels) && Array.isArray(diario.valores) && diario.labels.length) {
+                    new Chart(ctxDiario, {
+                        type: 'line',
+                        data: {
+                            labels: diario.labels,
+                            datasets: [{
+                                label: 'Total por día',
+                                data: diario.valores,
+                                tension: 0.25
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: true } },
+                            scales: { y: { beginAtZero: true } }
+                        }
+                    });
+                }
+
+                const metodo = safeParse('report-metodo-data');
+                const ctxMetodo = document.getElementById('chartMetodo');
+
+                if (metodo && ctxMetodo && Array.isArray(metodo.labels) && Array.isArray(metodo.valores) && metodo.labels.length) {
+                    new Chart(ctxMetodo, {
+                        type: 'bar',
+                        data: {
+                            labels: metodo.labels,
+                            datasets: [{
+                                label: 'Total por método',
+                                data: metodo.valores
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: true } },
+                            scales: { y: { beginAtZero: true } }
+                        }
+                    });
+                }
+            })();
+            </script>
+
+        {% else %}
+
+            <div class="report-card">
+                <p class="text-muted mb-0">
+                    No hay pagos reales en el período seleccionado.
+                </p>
+            </div>
+
+        {% endif %}
+    {% endif %}
+
+</div>
+
+{% endblock %}
