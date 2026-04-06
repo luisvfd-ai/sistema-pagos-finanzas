@@ -63,7 +63,7 @@
   "model": "pagos.unidadnegocio",
   "pk": 4,
   "fields": {
-    "nombre": "Costanera Ampliación",
+    "nombre": "Costanera AmpliaciÃ³n",
     "codigo": "costanera_ampliacion",
     "descripcion": "",
     "activa": true,
@@ -175,7 +175,7 @@
   "model": "pagos.unidadnegocio",
   "pk": 12,
   "fields": {
-    "nombre": "Pitrufquén",
+    "nombre": "PitrufquÃ©n",
     "codigo": "pitrufquen",
     "descripcion": "",
     "activa": true,
