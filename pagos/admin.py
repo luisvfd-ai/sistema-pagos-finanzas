@@ -1,5 +1,7 @@
 from django.contrib import admin
 from .models import (
+    EmpresaConfig,
+    UnidadNegocio,
     PagoProgramado,
     EventoPago,
     PagoReal,
@@ -8,11 +10,61 @@ from .models import (
 )
 
 
+@admin.register(EmpresaConfig)
+class EmpresaConfigAdmin(admin.ModelAdmin):
+    list_display = ('display_name_admin', 'rut', 'ciudad', 'email', 'telefono', 'actualizado')
+    readonly_fields = ('config_key', 'creado', 'actualizado')
+
+    fieldsets = (
+        ('Identificación', {
+            'fields': ('nombre_empresa', 'razon_social', 'rut', 'giro')
+        }),
+        ('Contacto', {
+            'fields': ('email', 'telefono', 'direccion', 'ciudad')
+        }),
+        ('Branding', {
+            'fields': ('logo',)
+        }),
+        ('Sistema', {
+            'fields': ('config_key', 'creado', 'actualizado')
+        }),
+    )
+
+    @admin.display(description='Empresa')
+    def display_name_admin(self, obj):
+        return obj.display_name
+
+    def has_add_permission(self, request):
+        if EmpresaConfig.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+
+@admin.register(UnidadNegocio)
+class UnidadNegocioAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'codigo', 'activa', 'orden', 'total_compromisos')
+    list_filter = ('activa',)
+    search_fields = ('nombre', 'codigo', 'descripcion')
+    ordering = ('orden', 'nombre')
+
+
 @admin.register(PagoProgramado)
 class PagoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'tipo', 'monto', 'frecuencia', 'fecha_inicio', 'activo')
-    list_filter = ('tipo', 'frecuencia', 'activo')
-    search_fields = ('nombre',)
+    list_display = (
+        'nombre',
+        'tipo',
+        'unidad_negocio_label_admin',
+        'monto',
+        'frecuencia',
+        'fecha_inicio',
+        'activo',
+    )
+    list_filter = ('tipo', 'unidad_negocio_ref', 'frecuencia', 'activo')
+    search_fields = ('nombre', 'descripcion', 'unidad_negocio')
+
+    @admin.display(description='Unidad')
+    def unidad_negocio_label_admin(self, obj):
+        return obj.unidad_negocio_label_actual()
 
 
 @admin.register(EventoPago)

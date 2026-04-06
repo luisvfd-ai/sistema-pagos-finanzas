@@ -6,6 +6,8 @@ import re
 from datetime import datetime, date, timedelta
 import os
 from functools import wraps
+from .reports import generar_proyeccion_json, resumen_proyeccion
+from .analytics import obtener_proyeccion_hasta_fecha
 
 from django import forms
 from django.shortcuts import render, redirect, get_object_or_404
@@ -28,6 +30,9 @@ from .models import (
     MovimientoBancario,
     ImportacionPago,
     ImportacionPagoDetalle,
+    UnidadNegocio,
+    EmpresaConfig,
+    unidad_negocio_label_from_codigo,
 )
 from .forms import (
     PagoProgramadoForm,
@@ -35,6 +40,7 @@ from .forms import (
     CartolaImportForm,
     AutoConciliacionForm,
     PagosImportExcelForm,
+    UnidadNegocioForm,
 )
 
 from .dashboard import (
@@ -43,12 +49,15 @@ from .dashboard import (
     calcular_riesgo_financiero,
     eventos_vencidos,
     eventos_proximos,
+    eventos_vencidos_agrupados,
+    eventos_proximos_agrupados,
     resumen_alertas_financieras,
     obtener_panel_alertas_financieras,
     obtener_alertas_urgentes_email,
     resumen_alertas_urgentes_email,
     listar_compromisos_financieros,
     resumen_estados_compromisos,
+    resumen_compromisos_por_unidad,
 )
 
 
@@ -59,6 +68,13 @@ VIEW_PERMISSION_MAP = {
     'pagos_lista': ['pagos.view_pagoprogramado'],
     'pagos_crear': ['pagos.add_pagoprogramado'],
     'pagos_editar': ['pagos.change_pagoprogramado'],
+    'unidades_negocio_lista': ['pagos.view_pagoprogramado'],
+    'unidades_negocio_crear': ['pagos.change_pagoprogramado'],
+    'unidades_negocio_editar': ['pagos.change_pagoprogramado'],
+    'unidades_negocio_toggle': ['pagos.change_pagoprogramado'],
+    'unidades_negocio_eliminar': ['pagos.change_pagoprogramado'],
+    'empresa_configuracion': ['pagos.change_pagoprogramado'],
+    'ayuda': ['pagos.view_pagoprogramado'],
 
     'pagos_importar_excel': ['pagos.add_importacionpago'],
     'pagos_importar_excel_limpiar_preview': ['pagos.add_importacionpago'],
@@ -120,6 +136,62 @@ class ReportesFiltroForm(forms.Form):
         widget=forms.DateInput(attrs={"type": "date", "class": "form-control"})
     )
 
+class EmpresaConfigForm(forms.ModelForm):
+    class Meta:
+        model = EmpresaConfig
+        fields = [
+            'nombre_empresa',
+            'razon_social',
+            'rut',
+            'giro',
+            'email',
+            'telefono',
+            'direccion',
+            'ciudad',
+            'logo',
+        ]
+        widgets = {
+            'nombre_empresa': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Comercial XYZ'}),
+            'razon_social': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Comercial XYZ SpA'}),
+            'rut': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 76.123.456-7'}),
+            'giro': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Servicios, retail, entretención...'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'contacto@empresa.cl'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: +56 9 1234 5678'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección comercial'}),
+            'ciudad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Puerto Montt'}),
+            'logo': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.png,.jpg,.jpeg,.svg,.webp,image/*'}),
+        }
+        labels = {
+            'nombre_empresa': 'Nombre empresa',
+            'razon_social': 'Razón social',
+            'rut': 'RUT',
+            'giro': 'Giro',
+            'email': 'Email',
+            'telefono': 'Teléfono',
+            'direccion': 'Dirección',
+            'ciudad': 'Ciudad',
+            'logo': 'Logo',
+        }
+        help_texts = {
+            'logo': 'Opcional. Sube un logo institucional en PNG, JPG, JPEG, SVG o WEBP.',
+        }
+
+    def clean_rut(self):
+        return (self.cleaned_data.get('rut') or '').strip()
+
+
+def _get_empresa_actual():
+    try:
+        return EmpresaConfig.get_solo()
+    except Exception:
+        return None
+
+
+def _render_view(request, template_name, context=None, *args, **kwargs):
+    contexto = dict(context or {})
+    contexto.setdefault('empresa_actual', _get_empresa_actual())
+    return render(request, template_name, contexto, *args, **kwargs)
+
 
 # ==================================================
 # HELPERS EXPORT (reportes)
@@ -153,12 +225,67 @@ def _get_rango_fechas_from_request(request):
     return desde, hasta
 
 
-def _build_report_queryset(desde, hasta):
-    return (
+def _build_report_queryset(desde, hasta, unidad_negocio=None):
+    qs = (
         PagoReal.objects.filter(fecha_pago__range=[desde, hasta])
         .select_related('pago')
         .order_by('fecha_pago', 'id')
     )
+
+    unidad_negocio = (unidad_negocio or '').strip()
+    if unidad_negocio:
+        qs = qs.filter(pago__unidad_negocio=unidad_negocio)
+
+    return qs
+
+def _get_unidad_label_from_pago_obj(pago_obj):
+    if not pago_obj:
+        return 'Otros'
+
+    try:
+        if hasattr(pago_obj, 'unidad_negocio_label_actual'):
+            return pago_obj.unidad_negocio_label_actual() or 'Otros'
+    except Exception:
+        pass
+
+    return unidad_negocio_label_from_codigo(getattr(pago_obj, 'unidad_negocio', None) or 'otros')
+
+
+def _get_unidades_negocio_disponibles_reportes():
+    return PagoProgramado.unidades_negocio_disponibles()
+
+
+def _resumen_pagos_por_unidad(pagos_qs):
+    filas = list(
+        pagos_qs
+        .values('pago__unidad_negocio')
+        .annotate(
+            total=Coalesce(
+                Sum('monto'),
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=14, decimal_places=2)
+            ),
+            cantidad=Count('id')
+        )
+        .order_by('-total', 'pago__unidad_negocio')
+    )
+
+    resultado = []
+    for fila in filas:
+        unidad = fila.get('pago__unidad_negocio') or 'otros'
+        total = Decimal(fila.get('total') or 0)
+        cantidad = int(fila.get('cantidad') or 0)
+        promedio = (total / Decimal(cantidad)) if cantidad else Decimal('0.00')
+
+        resultado.append({
+            'unidad_negocio': unidad,
+            'unidad_negocio_label': unidad_negocio_label_from_codigo(unidad),
+            'total': total,
+            'cantidad': cantidad,
+            'promedio': promedio,
+        })
+
+    return resultado
 
 
 def _export_csv(pagos_qs, desde, hasta):
@@ -170,12 +297,13 @@ def _export_csv(pagos_qs, desde, hasta):
     response.write('\ufeff')
 
     writer = csv.writer(response)
-    writer.writerow(["Fecha", "Compromiso", "Monto", "Método", "Observación"])
+    writer.writerow(["Fecha", "Compromiso", "Unidad", "Monto", "Método", "Observación"])
 
     for p in pagos_qs:
         writer.writerow([
             p.fecha_pago.strftime('%Y-%m-%d') if p.fecha_pago else "",
             p.pago.nombre if p.pago_id else "",
+            _get_unidad_label_from_pago_obj(p.pago) if p.pago_id else "Otros",
             str(p.monto),
             p.metodo_pago or "",
             (p.observacion or "").strip(),
@@ -196,7 +324,7 @@ def _export_xlsx(pagos_qs, desde, hasta):
     ws = wb.active
     ws.title = "Pagos"
 
-    headers = ["Fecha", "Compromiso", "Monto", "Método", "Observación"]
+    headers = ["Fecha", "Compromiso", "Unidad", "Monto", "Método", "Observación"]
     ws.append(headers)
 
     header_font = Font(bold=True)
@@ -209,15 +337,16 @@ def _export_xlsx(pagos_qs, desde, hasta):
         ws.append([
             p.fecha_pago.strftime('%Y-%m-%d') if p.fecha_pago else "",
             p.pago.nombre if p.pago_id else "",
+            _get_unidad_label_from_pago_obj(p.pago) if p.pago_id else "Otros",
             float(p.monto or 0),
             p.metodo_pago or "",
             (p.observacion or "").strip(),
         ])
 
     for r in range(2, ws.max_row + 1):
-        ws.cell(row=r, column=3).number_format = '#,##0.00'
+        ws.cell(row=r, column=4).number_format = '#,##0.00'
 
-    widths = [12, 30, 14, 16, 45]
+    widths = [12, 30, 18, 14, 16, 45]
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
 
@@ -269,23 +398,24 @@ def _export_pdf(pagos_qs, desde, hasta, total, promedio):
     story.append(resumen)
     story.append(Spacer(1, 12))
 
-    data = [["Fecha", "Compromiso", "Monto", "Método", "Observación"]]
+    data = [["Fecha", "Compromiso", "Unidad", "Monto", "Método", "Observación"]]
     for p in pagos_qs:
         data.append([
             p.fecha_pago.strftime('%Y-%m-%d') if p.fecha_pago else "",
             p.pago.nombre if p.pago_id else "",
+            _get_unidad_label_from_pago_obj(p.pago) if p.pago_id else "Otros",
             f"${(p.monto or 0):,.0f}",
             p.metodo_pago or "",
             (p.observacion or "—"),
         ])
 
-    table = Table(data, colWidths=[75, 220, 90, 110, 280])
+    table = Table(data, colWidths=[75, 180, 110, 90, 95, 240])
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111827")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, 0), 10),
-        ("ALIGN", (2, 1), (2, -1), "RIGHT"),
+        ("ALIGN", (3, 1), (3, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("GRID", (0, 0), (-1, -1), 0.25, colors.lightgrey),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F9FAFB")]),
@@ -301,7 +431,6 @@ def _export_pdf(pagos_qs, desde, hasta, total, promedio):
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     response.write(pdf)
     return response
-
 
 # ==================================================
 # HELPERS ALERTAS / PRIORIDAD VISUAL
@@ -421,6 +550,259 @@ def _enriquecer_panel_alertas(panel):
         'proximas': _enriquecer_alertas_eventos(panel.get('proximas', [])),
     }
 
+def _sumar_saldo_eventos(eventos):
+    total = Decimal('0.00')
+    for e in eventos:
+        if isinstance(e, dict):
+            valor = e.get('saldo_pendiente_real') or 0
+        else:
+            valor = getattr(e, 'saldo_pendiente_real', 0) or 0
+        total += Decimal(str(valor))
+    return total
+
+
+def _normalizar_alerta_item(item):
+    if isinstance(item, dict):
+        return dict(item)
+
+    campos = [
+        'fecha',
+        'fecha_alerta',
+        'nombre',
+        'tipo',
+        'descripcion',
+        'unidad_negocio',
+        'unidad_negocio_label',
+        'monto_evento',
+        'pagado_acumulado',
+        'saldo_pendiente_real',
+        'pago_id',
+        'estado_compromiso',
+        'cantidad_eventos_pendientes',
+        'prioridad_label',
+        'prioridad_clase',
+        'prioridad_texto',
+        'prioridad_badge_bg',
+        'prioridad_badge_text',
+        'prioridad_fila_bg',
+        'prioridad_fila_text',
+        'prioridad_orden',
+    ]
+
+    data = {}
+    for campo in campos:
+        data[campo] = getattr(item, campo, None)
+    return data
+
+
+def _categoria_alerta_email(item):
+    nombre = str(item.get('nombre') or '').strip().lower()
+    tipo = str(item.get('tipo') or '').strip().lower()
+    descripcion = str(item.get('descripcion') or '').strip().lower()
+
+    texto = f"{nombre} {descripcion}".strip()
+
+    def contiene(*palabras):
+        return any(p in texto for p in palabras)
+
+    if contiene('arriendo', 'rent', 'alquiler'):
+        return 'Arriendos'
+
+    if contiene('saesa', 'luz', 'electricidad', 'energia', 'energía'):
+        return 'Luz'
+
+    if contiene('agua', 'essal', 'sanitaria'):
+        return 'Agua'
+
+    if contiene('iva', 'impuesto', 'sii', 'tesoreria', 'tesorería', 'contribuciones'):
+        return 'Impuestos'
+
+    if contiene('prestamo', 'préstamo'):
+        return 'Préstamos'
+
+    if tipo == 'credito' or contiene('credito', 'crédito', 'banco', 'santander', 'estado', 'cmr', 'scotiabank'):
+        return 'Créditos'
+
+    if tipo == 'fijo':
+        return 'Fijos operativos'
+
+    return 'Otros'
+
+
+def _nombre_unidad_alerta_email(item):
+    unidad = str(item.get('unidad_negocio') or '').strip().lower()
+    unidad_label = str(item.get('unidad_negocio_label') or '').strip()
+
+    if unidad_label:
+        return unidad_label
+
+    mapa = {
+        'terminal': 'Terminal',
+        'cauquenes': 'Cauquenes',
+        'alerce': 'Alerce',
+        'pitrufquen': 'Pitrufquén',
+        'pasmar': 'Pasmar',
+        'valdivia': 'Valdivia',
+        'espacio_costanera': 'Espacio Costanera',
+        'costanera_ampliacion': 'Costanera Ampliación',
+        'mall_castro': 'Mall Castro',
+        'carolina': 'Carolina',
+        'oficina': 'Oficina',
+        'imposiciones': 'Imposiciones',
+        'iva': 'IVA',
+        'Vivian': 'Vivian',
+        'Tottus': 'Tottus',
+        'otros': 'Otros',
+    }
+
+    return mapa.get(unidad, 'Otros')
+
+
+def _prioridad_unidad_alerta(nombre):
+    orden = {
+        'Terminal': 1,
+        'Cauquenes': 2,
+        'Alerce': 3,
+        'Pitrufquén': 4,
+        'Pasmar': 5,
+        'Valdivia': 6,
+        'Espacio Costanera': 7,
+        'Costanera Ampliación': 8,
+        'Mall Castro': 9,
+        'Carolina': 10,
+        'Oficina': 11,
+        'Imposiciones': 12,
+        'IVA': 13,
+        'Vivian': 14,
+        'Tottus': 15,
+        'Otros': 99,
+    }
+    return orden.get(nombre, 99)
+
+
+def _prioridad_categoria_alerta(nombre):
+    orden = {
+        'Arriendos': 1,
+        'Luz': 2,
+        'Agua': 3,
+        'Créditos': 4,
+        'Préstamos': 5,
+        'Impuestos': 6,
+        'Fijos operativos': 7,
+        'Otros': 99,
+    }
+    return orden.get(nombre, 99)
+
+
+def _agrupar_eventos_alerta_por_unidad_categoria(eventos):
+    unidades = {}
+
+    for raw in (eventos or []):
+        item = _normalizar_alerta_item(raw)
+        item['categoria_alerta'] = _categoria_alerta_email(item)
+        item['unidad_alerta'] = _nombre_unidad_alerta_email(item)
+
+        unidad = item['unidad_alerta']
+        categoria = item['categoria_alerta']
+
+        unidades.setdefault(unidad, {})
+        unidades[unidad].setdefault(categoria, [])
+        unidades[unidad][categoria].append(item)
+
+    unidades_ordenadas = []
+
+    for unidad_nombre, categorias in unidades.items():
+        categorias_ordenadas = []
+
+        for categoria, items in categorias.items():
+            items_ordenados = sorted(
+                items,
+                key=lambda x: (
+                    x.get('fecha') or x.get('fecha_alerta') or date.max,
+                    x.get('prioridad_orden') or 999,
+                    -Decimal(str(x.get('saldo_pendiente_real') or 0)),
+                    str(x.get('nombre') or '').lower(),
+                )
+            )
+
+            categorias_ordenadas.append({
+                'categoria': categoria,
+                'cantidad': len(items_ordenados),
+                'saldo_total': _sumar_saldo_eventos(items_ordenados),
+                'eventos': items_ordenados,
+            })
+
+        categorias_ordenadas.sort(
+            key=lambda g: (
+                _prioridad_categoria_alerta(g['categoria']),
+                -Decimal(str(g['saldo_total'] or 0)),
+                g['categoria'].lower(),
+            )
+        )
+
+        saldo_unidad = Decimal('0.00')
+        cantidad_unidad = 0
+
+        for grupo in categorias_ordenadas:
+            saldo_unidad += Decimal(str(grupo['saldo_total'] or 0))
+            cantidad_unidad += grupo['cantidad']
+
+        unidades_ordenadas.append({
+            'unidad': unidad_nombre,
+            'cantidad': cantidad_unidad,
+            'saldo_total': saldo_unidad,
+            'categorias': categorias_ordenadas,
+        })
+
+    unidades_ordenadas.sort(
+        key=lambda u: (
+            _prioridad_unidad_alerta(u['unidad']),
+            -Decimal(str(u['saldo_total'] or 0)),
+            u['unidad'].lower(),
+        )
+    )
+
+    return unidades_ordenadas
+
+
+def _agrupar_panel_alertas_por_unidad_categoria(panel):
+    return {
+        'vencidas': _agrupar_eventos_alerta_por_unidad_categoria(panel.get('vencidas', [])),
+        'vencen_hoy': _agrupar_eventos_alerta_por_unidad_categoria(panel.get('vencen_hoy', [])),
+        'urgentes': _agrupar_eventos_alerta_por_unidad_categoria(panel.get('urgentes', [])),
+        'proximas': _agrupar_eventos_alerta_por_unidad_categoria(panel.get('proximas', [])),
+    }
+
+
+def _agrupar_alertas_email_por_categoria(eventos, dias_urgentes):
+    hoy = timezone.now().date()
+
+    buckets = {
+        'vencidas': [],
+        'hoy': [],
+        'proximas': [],
+    }
+
+    for raw in eventos:
+        item = _normalizar_alerta_item(raw)
+        fecha = item.get('fecha') or item.get('fecha_alerta')
+        if not fecha:
+            continue
+
+        if fecha < hoy:
+            buckets['vencidas'].append(item)
+        elif fecha == hoy:
+            buckets['hoy'].append(item)
+        else:
+            buckets['proximas'].append(item)
+
+    return {
+        'vencidas': _agrupar_eventos_alerta_por_unidad_categoria(buckets['vencidas']),
+        'hoy': _agrupar_eventos_alerta_por_unidad_categoria(buckets['hoy']),
+        'proximas': _agrupar_eventos_alerta_por_unidad_categoria(buckets['proximas']),
+        'dias_urgentes': dias_urgentes,
+    }
+
 # ==================================================
 # HELPER ENVÍO ALERTAS EMAIL
 # ==================================================
@@ -459,9 +841,12 @@ def _enviar_alerta_urgente_email_base():
             'destinatarios': destinatarios,
         }
 
+    eventos_agrupados = _agrupar_alertas_email_por_categoria(eventos, dias_urgentes)
+
     contexto = {
         'resumen': resumen,
         'eventos': eventos,
+        'eventos_agrupados': eventos_agrupados,
         'dias_urgentes': dias_urgentes,
         'fecha_generacion': timezone.localtime(),
     }
@@ -984,9 +1369,13 @@ def dashboard_financiero(request):
     vencidos = eventos_vencidos()
     proximos = eventos_proximos(dias=7)
 
+    vencidos_agrupados = eventos_vencidos_agrupados()
+    proximos_agrupados = eventos_proximos_agrupados(dias=7)
+
     alertas_resumen = resumen_alertas_financieras()
     pagos = listar_compromisos_financieros(include_pagados=True)
     resumen_estados = resumen_estados_compromisos()
+    resumen_unidades = resumen_compromisos_por_unidad(pagos)
 
     contexto = {
         'kpis': kpis,
@@ -995,30 +1384,36 @@ def dashboard_financiero(request):
         'porcentaje': porcentaje,
         'eventos_vencidos': vencidos,
         'eventos_proximos': proximos,
+        'eventos_vencidos_agrupados': vencidos_agrupados,
+        'eventos_proximos_agrupados': proximos_agrupados,
         'alertas_resumen': alertas_resumen,
         'pagos': pagos,
         'resumen_estados': resumen_estados,
+        'resumen_unidades': resumen_unidades,
     }
 
-    return render(request, 'pagos/dashboard.html', contexto)
+    return _render_view(request, 'pagos/dashboard.html', contexto)
 
 
 @staff_member_required
 def alertas_financieras(request):
     dias_urgentes = getattr(settings, 'ALERTAS_URGENTES_DIAS', 2)
+
     panel_base = obtener_panel_alertas_financieras(limite=50)
     panel_enriquecido = _enriquecer_panel_alertas(panel_base)
+    panel_agrupado = _agrupar_panel_alertas_por_unidad_categoria(panel_enriquecido)
 
     contexto = {
         'alertas_resumen': resumen_alertas_financieras(),
         'alertas_panel': panel_enriquecido,
+        'alertas_panel_agrupado': panel_agrupado,
         'alertas_email_resumen': resumen_alertas_urgentes_email(dias=dias_urgentes),
         'dias_urgentes': dias_urgentes,
         'puede_enviar_alerta_email': (
             request.user.is_superuser or request.user.has_perm('pagos.change_pagoprogramado')
         ),
     }
-    return render(request, 'pagos/alertas_financieras.html', contexto)
+    return _render_view(request, 'pagos/alertas_financieras.html', contexto)
 
 
 @staff_member_required
@@ -1051,12 +1446,329 @@ def enviar_alerta_urgente_email(request):
 # ==================================================
 
 @staff_member_required
+
+
+def _fmt_clp_export(value):
+    try:
+        value = Decimal(str(value or 0))
+    except Exception:
+        value = Decimal('0')
+
+    sign = '-' if value < 0 else ''
+    value = abs(value)
+    entero = int(value.quantize(Decimal('1')))
+    return f"{sign}${entero:,}".replace(',', '.')
+
+
+def _fmt_pct_export(value):
+    try:
+        value = Decimal(str(value or 0))
+    except Exception:
+        value = Decimal('0')
+
+    if value == value.to_integral():
+        return f"{int(value)}%"
+
+    return f"{value.quantize(Decimal('0.01'))}%"
+
+
+def _fmt_date_export(value):
+    if not value:
+        return '—'
+    try:
+        return value.strftime('%d-%m-%Y')
+    except Exception:
+        return str(value)
+
+
+def _pagos_lista_export_filename(ext):
+    stamp = timezone.localtime().strftime('%Y%m%d_%H%M')
+    return f"pagos_lista_{stamp}.{ext}"
+
+
+def _pagos_lista_export_querystring(request):
+    params = request.GET.copy()
+    params.pop('export', None)
+    params.pop('page', None)
+    return params.urlencode()
+
+
+def _pagos_lista_filter_labels(*, q, unidad_negocio, tipo, estado_raw, activo_raw, ver_pagados):
+    tipos_map = {value: label for value, label in PagoProgramado.TIPO_CHOICES}
+    estados_map = {
+        'pendiente': 'Pendiente',
+        'parcial': 'Parcial',
+        'pagado': 'Pagado',
+    }
+    activo_map = {
+        '1': 'Sí',
+        '0': 'No',
+    }
+
+    return {
+        'q': q or '—',
+        'unidad_negocio': unidad_negocio_label_from_codigo(unidad_negocio) if unidad_negocio else 'Todas',
+        'tipo': tipos_map.get(tipo, 'Todos') if tipo else 'Todos',
+        'estado': estados_map.get((estado_raw or '').lower(), 'Todos') if estado_raw else 'Todos',
+        'activo': activo_map.get(activo_raw, 'Todos') if activo_raw else 'Todos',
+        'ver_pagados': 'Sí' if ver_pagados else 'No',
+    }
+
+
+def _export_pagos_lista_csv(pagos, filtros_labels):
+    from django.http import HttpResponse
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{_pagos_lista_export_filename("csv")}"'
+    response.write('\ufeff')
+
+    writer = csv.writer(response, delimiter=';')
+
+    writer.writerow(['Cuentas por pagar'])
+    writer.writerow(['Generado', timezone.localtime().strftime('%d-%m-%Y %H:%M')])
+    writer.writerow(['Búsqueda', filtros_labels['q']])
+    writer.writerow(['Unidad / lugar', filtros_labels['unidad_negocio']])
+    writer.writerow(['Tipo', filtros_labels['tipo']])
+    writer.writerow(['Estado', filtros_labels['estado']])
+    writer.writerow(['Activo', filtros_labels['activo']])
+    writer.writerow(['Ver pagados', filtros_labels['ver_pagados']])
+    writer.writerow(['Total registros', len(pagos)])
+    writer.writerow([])
+
+    writer.writerow([
+        'Fecha inicio',
+        'Concepto',
+        'Unidad',
+        'Cuota actual',
+        'Abonado cuota',
+        'Saldo cuota',
+        'Fecha cuota',
+        'Estado cuota',
+        'Saldo deuda',
+        'Progreso',
+    ])
+
+    for p in pagos:
+        writer.writerow([
+            _fmt_date_export(p.get('fecha_inicio')),
+            p.get('nombre', ''),
+            p.get('unidad_negocio_label') or p.get('unidad_negocio') or 'Otros',
+            _fmt_clp_export(p.get('cuota_actual')),
+            _fmt_clp_export(p.get('abonado_cuota')),
+            _fmt_clp_export(p.get('saldo_cuota')),
+            _fmt_date_export(p.get('fecha_cuota_actual')),
+            p.get('estado_cuota', ''),
+            _fmt_clp_export(p.get('saldo_deuda')),
+            _fmt_pct_export(p.get('porcentaje')),
+        ])
+
+    return response
+
+
+def _export_pagos_lista_xlsx(pagos, filtros_labels):
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Cuentas por pagar'
+
+    ws['A1'] = 'Cuentas por pagar'
+    ws['A1'].font = Font(bold=True, size=14)
+
+    filtros_rows = [
+        ('Generado', timezone.localtime().strftime('%d-%m-%Y %H:%M')),
+        ('Búsqueda', filtros_labels['q']),
+        ('Unidad / lugar', filtros_labels['unidad_negocio']),
+        ('Tipo', filtros_labels['tipo']),
+        ('Estado', filtros_labels['estado']),
+        ('Activo', filtros_labels['activo']),
+        ('Ver pagados', filtros_labels['ver_pagados']),
+        ('Total registros', len(pagos)),
+    ]
+
+    start_filters = 3
+    for idx, (label, value) in enumerate(filtros_rows, start=start_filters):
+        ws.cell(row=idx, column=1, value=label).font = Font(bold=True)
+        ws.cell(row=idx, column=2, value=value)
+
+    header_row = start_filters + len(filtros_rows) + 2
+    headers = [
+        'Fecha inicio',
+        'Concepto',
+        'Unidad',
+        'Cuota actual',
+        'Abonado cuota',
+        'Saldo cuota',
+        'Fecha cuota',
+        'Estado cuota',
+        'Saldo deuda',
+        'Progreso',
+    ]
+
+    header_fill = PatternFill(fill_type='solid', fgColor='111827')
+    header_font = Font(bold=True, color='FFFFFF')
+
+    for col_idx, title in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=col_idx, value=title)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+
+    data_start = header_row + 1
+    for row_idx, p in enumerate(pagos, start=data_start):
+        ws.cell(row=row_idx, column=1, value=_fmt_date_export(p.get('fecha_inicio')))
+        ws.cell(row=row_idx, column=2, value=p.get('nombre', ''))
+        ws.cell(row=row_idx, column=3, value=p.get('unidad_negocio_label') or p.get('unidad_negocio') or 'Otros')
+        ws.cell(row=row_idx, column=4, value=float(Decimal(str(p.get('cuota_actual') or 0))))
+        ws.cell(row=row_idx, column=5, value=float(Decimal(str(p.get('abonado_cuota') or 0))))
+        ws.cell(row=row_idx, column=6, value=float(Decimal(str(p.get('saldo_cuota') or 0))))
+        ws.cell(row=row_idx, column=7, value=_fmt_date_export(p.get('fecha_cuota_actual')))
+        ws.cell(row=row_idx, column=8, value=p.get('estado_cuota', ''))
+        ws.cell(row=row_idx, column=9, value=float(Decimal(str(p.get('saldo_deuda') or 0))))
+        ws.cell(row=row_idx, column=10, value=float(Decimal(str(p.get('porcentaje') or 0))))
+
+    for row_idx in range(data_start, data_start + len(pagos)):
+        for col_idx in (4, 5, 6, 9):
+            ws.cell(row=row_idx, column=col_idx).number_format = '#,##0'
+        ws.cell(row=row_idx, column=10).number_format = '0.00'
+
+    widths = [14, 32, 22, 14, 16, 14, 14, 16, 14, 12]
+    for idx, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+
+    ws.freeze_panes = f'A{data_start}'
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{_pagos_lista_export_filename("xlsx")}"'
+    return response
+
+
+def _export_pagos_lista_pdf(pagos, filtros_labels):
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        leftMargin=20,
+        rightMargin=20,
+        topMargin=20,
+        bottomMargin=20,
+    )
+
+    styles = getSampleStyleSheet()
+    story = []
+
+    story.append(Paragraph('<b>Cuentas por pagar</b>', styles['Title']))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(
+        (
+            f"<b>Generado:</b> {timezone.localtime().strftime('%d-%m-%Y %H:%M')} &nbsp;&nbsp;&nbsp; "
+            f"<b>Registros:</b> {len(pagos)}"
+        ),
+        styles['Normal']
+    ))
+    story.append(Paragraph(
+        (
+            f"<b>Búsqueda:</b> {filtros_labels['q']} &nbsp;&nbsp;&nbsp; "
+            f"<b>Unidad:</b> {filtros_labels['unidad_negocio']} &nbsp;&nbsp;&nbsp; "
+            f"<b>Tipo:</b> {filtros_labels['tipo']}"
+        ),
+        styles['Normal']
+    ))
+    story.append(Paragraph(
+        (
+            f"<b>Estado:</b> {filtros_labels['estado']} &nbsp;&nbsp;&nbsp; "
+            f"<b>Activo:</b> {filtros_labels['activo']} &nbsp;&nbsp;&nbsp; "
+            f"<b>Ver pagados:</b> {filtros_labels['ver_pagados']}"
+        ),
+        styles['Normal']
+    ))
+    story.append(Spacer(1, 12))
+
+    data = [[
+        'Fecha inicio',
+        'Concepto',
+        'Unidad',
+        'Cuota actual',
+        'Abonado cuota',
+        'Saldo cuota',
+        'Fecha cuota',
+        'Estado cuota',
+        'Saldo deuda',
+        'Progreso',
+    ]]
+
+    if pagos:
+        for p in pagos:
+            data.append([
+                _fmt_date_export(p.get('fecha_inicio')),
+                Paragraph(str(p.get('nombre', '')), styles['BodyText']),
+                Paragraph(str(p.get('unidad_negocio_label') or p.get('unidad_negocio') or 'Otros'), styles['BodyText']),
+                _fmt_clp_export(p.get('cuota_actual')),
+                _fmt_clp_export(p.get('abonado_cuota')),
+                _fmt_clp_export(p.get('saldo_cuota')),
+                _fmt_date_export(p.get('fecha_cuota_actual')),
+                p.get('estado_cuota', ''),
+                _fmt_clp_export(p.get('saldo_deuda')),
+                _fmt_pct_export(p.get('porcentaje')),
+            ])
+    else:
+        data.append(['—', 'Sin registros', '—', '—', '—', '—', '—', '—', '—', '—'])
+
+    table = Table(
+        data,
+        repeatRows=1,
+        colWidths=[62, 165, 95, 72, 78, 72, 68, 78, 78, 55],
+    )
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#111827')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (3, 1), (5, -1), 'RIGHT'),
+        ('ALIGN', (8, 1), (9, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.lightgrey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
+    ]))
+
+    story.append(table)
+    doc.build(story)
+
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{_pagos_lista_export_filename("pdf")}"'
+    response.write(pdf)
+    return response
+
+
+@staff_member_required
 def pagos_lista(request):
     q = (request.GET.get('q') or '').strip()
+    unidad_negocio = (request.GET.get('unidad_negocio') or '').strip()
     tipo = (request.GET.get('tipo') or '').strip()
-    estado = (request.GET.get('estado') or '').strip().upper()
+    estado_raw = (request.GET.get('estado') or '').strip().lower()
+    estado = estado_raw.upper()
     activo_raw = (request.GET.get('activo') or '').strip().lower()
     ver_pagados = (request.GET.get('ver_pagados') or '').strip() == '1'
+    export = (request.GET.get('export') or '').strip().lower()
 
     activo = None
     if activo_raw == '1':
@@ -1072,6 +1784,12 @@ def pagos_lista(request):
         activo=activo,
     )
 
+    if unidad_negocio:
+        pagos_base = [
+            item for item in pagos_base
+            if (item.get('unidad_negocio') or 'otros') == unidad_negocio
+        ]
+
     pagos = []
     for item in pagos_base:
         pagos.append({
@@ -1079,15 +1797,37 @@ def pagos_lista(request):
             'fecha_inicio': item['fecha_inicio'],
             'nombre': item['nombre'],
             'tipo': item['tipo'],
-            'total': item['total_compromiso'],
-            'pagado': item['pagado_real'],
-            'saldo': item['saldo_real'],
+            'unidad_negocio': item.get('unidad_negocio') or 'otros',
+            'unidad_negocio_label': item.get('unidad_negocio_label') or 'Otros',
+            'cuotas': item.get('total_cuotas'),
+            'cuota_actual': item.get('monto_cuota_actual', Decimal('0.00')),
+            'abonado_cuota': item.get('abonado_cuota_actual', Decimal('0.00')),
+            'saldo_cuota': item.get('saldo_cuota_actual', Decimal('0.00')),
+            'fecha_cuota_actual': item.get('fecha_cuota_actual'),
+            'estado_cuota': item.get('estado_cuota_actual', 'Pendiente'),
+            'estado_cuota_clase': item.get('estado_cuota_clase', 'danger'),
+            'cuota_actual_label': item.get('cuota_actual_label', '1/1'),
+            'saldo_deuda': item.get('saldo_real', Decimal('0.00')),
             'estado': item['estado_real'],
             'porcentaje': item['porcentaje_pagado'],
             'activo': item['activo'],
-            'total_cuotas': item['total_cuotas'],
-            'cuotas_restantes': item['cuotas_restantes'],
         })
+
+    filtros_labels = _pagos_lista_filter_labels(
+        q=q,
+        unidad_negocio=unidad_negocio,
+        tipo=tipo,
+        estado_raw=estado_raw,
+        activo_raw=activo_raw,
+        ver_pagados=ver_pagados,
+    )
+
+    if export == 'csv':
+        return _export_pagos_lista_csv(pagos, filtros_labels)
+    if export == 'xlsx':
+        return _export_pagos_lista_xlsx(pagos, filtros_labels)
+    if export == 'pdf':
+        return _export_pagos_lista_pdf(pagos, filtros_labels)
 
     resumen_operativo = {
         'total': len(pagos),
@@ -1096,25 +1836,46 @@ def pagos_lista(request):
         'pagados': sum(1 for p in pagos if p['estado'] == 'PAGADO'),
     }
 
+    hoy = timezone.localdate()
+    resumen_monetario = {
+        'total_adeudado_real': sum((Decimal(str(p.get('saldo_deuda') or 0)) for p in pagos), Decimal('0.00')),
+        'total_cuota_pendiente': sum((Decimal(str(p.get('saldo_cuota') or 0)) for p in pagos), Decimal('0.00')),
+        'total_abonado_visible': sum((Decimal(str(p.get('abonado_cuota') or 0)) for p in pagos), Decimal('0.00')),
+        'total_vencido_visible': sum(
+            (
+                Decimal(str(p.get('saldo_cuota') or 0))
+                for p in pagos
+                if p.get('fecha_cuota_actual') and p['fecha_cuota_actual'] < hoy and Decimal(str(p.get('saldo_cuota') or 0)) > 0
+            ),
+            Decimal('0.00')
+        ),
+    }
+
     tipos_disponibles = [
         {'value': value, 'label': label}
         for value, label in PagoProgramado.TIPO_CHOICES
     ]
 
+    unidades_negocio_disponibles = PagoProgramado.unidades_negocio_disponibles()
+
     contexto = {
         'pagos': pagos,
         'tipos_disponibles': tipos_disponibles,
+        'unidades_negocio_disponibles': unidades_negocio_disponibles,
         'filtros': {
             'q': q,
+            'unidad_negocio': unidad_negocio,
             'tipo': tipo,
-            'estado': estado,
+            'estado': estado_raw,
             'activo': activo_raw,
             'ver_pagados': ver_pagados,
         },
         'resumen_operativo': resumen_operativo,
+        'resumen_monetario': resumen_monetario,
+        'export_querystring': _pagos_lista_export_querystring(request),
     }
 
-    return render(request, 'pagos/pagos_lista.html', contexto)
+    return _render_view(request, 'pagos/pagos_lista.html', contexto)
 
 
 # ==================================================
@@ -1133,7 +1894,7 @@ def pagos_crear(request):
     else:
         form = PagoProgramadoForm()
 
-    return render(request, 'pagos/pagos_form.html', {
+    return _render_view(request, 'pagos/pagos_form.html', {
         'form': form,
         'titulo': 'Nuevo compromiso / deuda',
         'modo_edicion': False,
@@ -1170,13 +1931,144 @@ def pagos_editar(request, pk):
                 'Edita con cuidado monto, cuotas, fecha y frecuencia.'
             )
 
-    return render(request, 'pagos/pagos_form.html', {
+    return _render_view(request, 'pagos/pagos_form.html', {
         'form': form,
         'titulo': f'Editar deuda: {pago.nombre}',
         'modo_edicion': True,
         'pago_obj': pago,
     })
 
+
+
+@staff_member_required
+def empresa_configuracion(request):
+    empresa = EmpresaConfig.get_solo() or EmpresaConfig()
+
+    if request.method == 'POST':
+        form = EmpresaConfigForm(request.POST, request.FILES, instance=empresa)
+        if form.is_valid():
+            empresa = form.save()
+            messages.success(request, f'Datos de empresa guardados correctamente: {empresa.display_name}.')
+            return redirect('empresa_configuracion')
+        messages.error(request, 'Revisa el formulario de empresa, hay campos inválidos.')
+    else:
+        form = EmpresaConfigForm(instance=empresa)
+
+    return _render_view(request, 'pagos/empresa_config_form.html', {
+        'form': form,
+        'titulo': 'Datos de la empresa',
+        'empresa_obj': empresa if getattr(empresa, 'pk', None) else None,
+    })
+
+
+
+
+
+@staff_member_required
+def ayuda(request):
+    return _render_view(request, 'pagos/ayuda.html', {
+        'titulo': 'Ayuda del sistema',
+    })
+
+
+
+# ==================================================
+# UNIDADES DE NEGOCIO (CRUD)
+# ==================================================
+
+@staff_member_required
+def unidades_negocio_lista(request):
+    unidades = list(
+        UnidadNegocio.objects
+        .annotate(total_compromisos_count=Count('pagos_programados'))
+        .order_by('orden', 'nombre', 'id')
+    )
+
+    total_unidades = len(unidades)
+    total_activas = sum(1 for u in unidades if u.activa)
+    total_con_uso = sum(1 for u in unidades if (getattr(u, 'total_compromisos_count', 0) or 0) > 0)
+
+    return _render_view(request, 'pagos/unidades_negocio_lista.html', {
+        'unidades': unidades,
+        'total_unidades': total_unidades,
+        'total_activas': total_activas,
+        'total_con_uso': total_con_uso,
+    })
+
+
+@staff_member_required
+def unidades_negocio_crear(request):
+    if request.method == 'POST':
+        form = UnidadNegocioForm(request.POST)
+        if form.is_valid():
+            unidad = form.save()
+            messages.success(request, f'Unidad creada correctamente: {unidad.nombre}.')
+            return redirect('unidades_negocio_lista')
+        messages.error(request, 'Revisa el formulario de unidad, hay campos inválidos.')
+    else:
+        form = UnidadNegocioForm()
+
+    return _render_view(request, 'pagos/unidad_negocio_form.html', {
+        'form': form,
+        'titulo': 'Nueva unidad de negocio',
+    })
+
+
+@staff_member_required
+def unidades_negocio_editar(request, pk):
+    unidad = get_object_or_404(UnidadNegocio, pk=pk)
+
+    if request.method == 'POST':
+        form = UnidadNegocioForm(request.POST, instance=unidad)
+        if form.is_valid():
+            unidad = form.save()
+            messages.success(request, f'Unidad actualizada correctamente: {unidad.nombre}.')
+            return redirect('unidades_negocio_lista')
+        messages.error(request, 'Revisa el formulario de unidad, hay campos inválidos.')
+    else:
+        form = UnidadNegocioForm(instance=unidad)
+
+    return _render_view(request, 'pagos/unidad_negocio_form.html', {
+        'form': form,
+        'titulo': f'Editar unidad: {unidad.nombre}',
+        'unidad_obj': unidad,
+    })
+
+
+@staff_member_required
+def unidades_negocio_toggle(request, pk):
+    if request.method != 'POST':
+        return redirect('unidades_negocio_lista')
+
+    unidad = get_object_or_404(UnidadNegocio, pk=pk)
+    unidad.activa = not unidad.activa
+    unidad.save(update_fields=['activa', 'actualizado'])
+
+    estado = 'activada' if unidad.activa else 'desactivada'
+    messages.success(request, f'Unidad {estado} correctamente: {unidad.nombre}.')
+    return redirect('unidades_negocio_lista')
+
+
+@staff_member_required
+def unidades_negocio_eliminar(request, pk):
+    if request.method != 'POST':
+        return redirect('unidades_negocio_lista')
+
+    unidad = get_object_or_404(UnidadNegocio, pk=pk)
+    asociados = unidad.pagos_programados.count()
+
+    if asociados > 0:
+        messages.error(
+            request,
+            f'No se puede eliminar la unidad "{unidad.nombre}" porque tiene {asociados} compromiso(s) asociado(s). '
+            f'Puedes desactivarla en vez de eliminarla.'
+        )
+        return redirect('unidades_negocio_lista')
+
+    nombre = unidad.nombre
+    unidad.delete()
+    messages.success(request, f'Unidad eliminada correctamente: {nombre}.')
+    return redirect('unidades_negocio_lista')
 
 # ==================================================
 # IMPORTACIÓN MASIVA EXCEL
@@ -1203,7 +2095,7 @@ def pagos_importar_excel(request):
                     rows = _parse_csv(archivo, sep=';')
             except Exception as e:
                 messages.error(request, f'No se pudo leer el archivo de importación: {e}')
-                return render(request, 'pagos/pagos_importar_excel.html', {
+                return _render_view(request, 'pagos/pagos_importar_excel.html', {
                     'form': form,
                     'preview_data': preview_data,
                 })
@@ -1227,7 +2119,7 @@ def pagos_importar_excel(request):
                 'Vista previa generada correctamente. Revisa los datos antes de confirmar la importación.'
             )
 
-            return render(request, 'pagos/pagos_importar_excel.html', {
+            return _render_view(request, 'pagos/pagos_importar_excel.html', {
                 'form': PagosImportExcelForm(initial={
                     'hoja': hoja,
                     'crear_pagos_reales': crear_pagos_reales,
@@ -1239,7 +2131,7 @@ def pagos_importar_excel(request):
     else:
         form = PagosImportExcelForm()
 
-    return render(request, 'pagos/pagos_importar_excel.html', {
+    return _render_view(request, 'pagos/pagos_importar_excel.html', {
         'form': form,
         'preview_data': preview_data,
     })
@@ -1337,6 +2229,9 @@ def pagos_importar_excel_confirmar(request):
                 if deuda:
                     existentes += 1
                 else:
+                    unidad_importada = (entry.get('unidad_negocio') or '').strip()
+                    unidad_ref = UnidadNegocio.objects.filter(codigo=unidad_importada).first() if unidad_importada else None
+
                     deuda = PagoProgramado.objects.create(
                         nombre=nombre[:120],
                         tipo=tipo_programado,
@@ -1346,6 +2241,8 @@ def pagos_importar_excel_confirmar(request):
                         total_cuotas=total_cuotas,
                         cuotas_restantes=cuotas_restantes,
                         descripcion=descripcion_importada,
+                        unidad_negocio_ref=unidad_ref,
+                        unidad_negocio=(unidad_ref.codigo if unidad_ref else (unidad_importada or 'otros')),
                         activo=True,
                     )
                     creadas += 1
@@ -1466,7 +2363,7 @@ def importaciones_historial(request):
         'kpi_confirmadas': importaciones.filter(estado='confirmada').count(),
         'kpi_revertidas': importaciones.filter(estado='revertida').count(),
     }
-    return render(request, 'pagos/importaciones_historial.html', contexto)
+    return _render_view(request, 'pagos/importaciones_historial.html', contexto)
 
 
 @staff_member_required
@@ -1538,7 +2435,7 @@ def pagos_real_crear(request):
             initial['pago'] = pago_id
         form = PagoRealForm(initial=initial)
 
-    return render(request, 'pagos/pagos_real_form.html', {
+    return _render_view(request, 'pagos/pagos_real_form.html', {
         'form': form,
         'titulo': 'Registrar pago real',
         'next': next_url,
@@ -1593,7 +2490,7 @@ def pagos_real_editar(request, pk):
                 'Edita con cuidado monto, fecha, compromiso y observación.'
             )
 
-    return render(request, 'pagos/pagos_real_form.html', {
+    return _render_view(request, 'pagos/pagos_real_form.html', {
         'form': form,
         'titulo': f'Editar pago real: {pago_real.pago.nombre}',
         'next': next_url,
@@ -1611,7 +2508,13 @@ def pagos_real_editar(request, pk):
 @staff_member_required
 def reportes_financieros(request):
     desde, hasta = _get_rango_fechas_from_request(request)
-    pagos_qs = _build_report_queryset(desde, hasta)
+
+    if request.method == 'POST':
+        filtro_unidad_negocio = (request.POST.get('unidad_negocio') or '').strip()
+    else:
+        filtro_unidad_negocio = (request.GET.get('unidad_negocio') or '').strip()
+
+    pagos_qs = _build_report_queryset(desde, hasta, filtro_unidad_negocio)
 
     total = pagos_qs.aggregate(
         total=Coalesce(
@@ -1636,6 +2539,11 @@ def reportes_financieros(request):
     chart_metodo_json = "{}"
     top_compromisos = []
     metodo_principal = "—"
+    resumen_unidades_periodo = []
+
+    proyeccion_json = '{"labels":[],"valores":[],"acumulado":[]}'
+    proyeccion_data = None
+    proyeccion_tabla = []
 
     if request.method == 'POST':
         diarios = (
@@ -1679,7 +2587,7 @@ def reportes_financieros(request):
 
         top = (
             pagos_qs
-            .values('pago__nombre')
+            .values('pago__nombre', 'pago__unidad_negocio')
             .annotate(
                 total_comp=Coalesce(
                     Sum('monto'),
@@ -1693,15 +2601,43 @@ def reportes_financieros(request):
 
         top_compromisos = [{
             "nombre": t['pago__nombre'],
+            "unidad_negocio": t.get('pago__unidad_negocio') or 'otros',
+            "unidad_negocio_label": unidad_negocio_label_from_codigo(t.get('pago__unidad_negocio') or 'otros'),
             "total": t['total_comp'],
             "cantidad": t['cantidad'],
         } for t in top]
 
-        form = ReportesFiltroForm(initial={"fecha_desde": desde, "fecha_hasta": hasta})
-    else:
-        form = ReportesFiltroForm(initial={"fecha_desde": desde, "fecha_hasta": hasta})
+        resumen_unidades_periodo = _resumen_pagos_por_unidad(pagos_qs)
 
-    return render(request, 'pagos/reportes.html', {
+        # -----------------------------
+        # PROYECCIÓN FUTURA
+        # -----------------------------
+        proyeccion_json = generar_proyeccion_json(
+            hasta,
+            unidad_negocio=filtro_unidad_negocio or None
+        )
+
+        proyeccion_data = resumen_proyeccion(
+            hasta,
+            unidad_negocio=filtro_unidad_negocio or None
+        )
+
+        proyeccion_tabla = obtener_proyeccion_hasta_fecha(
+            hasta,
+            unidad_negocio=filtro_unidad_negocio or None
+        )
+
+        form = ReportesFiltroForm(initial={
+            "fecha_desde": desde,
+            "fecha_hasta": hasta
+        })
+    else:
+        form = ReportesFiltroForm(initial={
+            "fecha_desde": desde,
+            "fecha_hasta": hasta
+        })
+
+    return _render_view(request, 'pagos/reportes.html', {
         'pagos': pagos_qs,
         'eventos': pagos_qs,
         'total': total,
@@ -1713,6 +2649,14 @@ def reportes_financieros(request):
         'chart_metodo_json': chart_metodo_json,
         'top_compromisos': top_compromisos,
         'metodo_principal': metodo_principal,
+        'resumen_unidades_periodo': resumen_unidades_periodo,
+        'filtro_unidad_negocio': filtro_unidad_negocio,
+        'unidades_negocio_disponibles': _get_unidades_negocio_disponibles_reportes(),
+
+        # PROYECCIÓN
+        'proyeccion_json': proyeccion_json,
+        'proyeccion_data': proyeccion_data,
+        'proyeccion_tabla': proyeccion_tabla,
     })
 
 
@@ -1876,7 +2820,7 @@ def cartolas_importar(request):
                     rows = _parse_csv(archivo, sep=sep)
             except Exception as e:
                 messages.error(request, f"No se pudo leer el archivo: {e}")
-                return render(request, "pagos/cartolas_importar.html", {"form": form})
+                return _render_view(request, "pagos/cartolas_importar.html", {"form": form})
 
             creados = 0
             duplicados = 0
@@ -1963,7 +2907,7 @@ def cartolas_importar(request):
                     request,
                     f"No se importó ningún movimiento. Revisa mapeo de columnas. Filas con error: {errores}"
                 )
-                return render(request, "pagos/cartolas_importar.html", {"form": form})
+                return _render_view(request, "pagos/cartolas_importar.html", {"form": form})
 
             messages.success(
                 request,
@@ -1975,7 +2919,7 @@ def cartolas_importar(request):
     else:
         form = CartolaImportForm()
 
-    return render(request, "pagos/cartolas_importar.html", {"form": form})
+    return _render_view(request, "pagos/cartolas_importar.html", {"form": form})
 
 
 @staff_member_required
@@ -2019,7 +2963,7 @@ def cartolas_lista(request):
 
     movimientos = qs.order_by("-fecha", "-id")[:500]
 
-    return render(request, "pagos/cartolas_lista.html", {
+    return _render_view(request, "pagos/cartolas_lista.html", {
         "movimientos": movimientos,
         "total": total,
         "q": q,
@@ -2103,7 +3047,7 @@ def cartolas_sugerencias(request):
         "solo_pendientes": solo_pendientes,
     })
 
-    return render(request, "pagos/cartolas_sugerencias.html", {
+    return _render_view(request, "pagos/cartolas_sugerencias.html", {
         "sugerencias": sugerencias,
         "limite": limite,
         "desde": desde,
@@ -2275,7 +3219,7 @@ def conciliacion_panel(request):
         .order_by("-fecha", "-id")[:10]
     )
 
-    return render(request, "pagos/conciliacion_panel.html", {
+    return _render_view(request, "pagos/conciliacion_panel.html", {
         "total_movimientos": total_movimientos,
         "total_conciliados": total_conciliados,
         "total_pendientes": total_pendientes,

@@ -102,3 +102,52 @@ def calcular_indice_riesgo():
         'proximos': proximos,
         'nivel': riesgo
     }
+
+
+# =========================================
+# PROYECCIÓN FUTURA HASTA FECHA
+# =========================================
+
+def obtener_proyeccion_hasta_fecha(fecha_hasta, unidad_negocio=None):
+    """
+    Proyección diaria de egresos futuros hasta una fecha dada.
+
+    Si se recibe unidad_negocio, filtra solo eventos pendientes
+    pertenecientes a esa unidad.
+    """
+
+    hoy = date.today()
+
+    eventos = EventoPago.objects.filter(
+        estado='pendiente',
+        fecha__gte=hoy,
+        fecha__lte=fecha_hasta
+    ).select_related('pago', 'pago__unidad_negocio_ref').order_by('fecha', 'id')
+
+    unidad_negocio = (unidad_negocio or '').strip()
+    if unidad_negocio:
+        eventos = eventos.filter(pago__unidad_negocio=unidad_negocio)
+
+    proyeccion = []
+    acumulado = Decimal('0')
+
+    for e in eventos:
+        monto = e.monto or Decimal('0')
+        acumulado += monto
+
+        pago = getattr(e, 'pago', None)
+
+        proyeccion.append({
+            'fecha': e.fecha,
+            'nombre': pago.nombre if pago else '—',
+            'unidad_negocio': (
+                pago.unidad_negocio_codigo_actual() if pago and hasattr(pago, 'unidad_negocio_codigo_actual') else 'otros'
+            ),
+            'unidad_negocio_label': (
+                pago.unidad_negocio_label_actual() if pago and hasattr(pago, 'unidad_negocio_label_actual') else 'Otros'
+            ),
+            'monto': monto,
+            'acumulado': acumulado
+        })
+
+    return proyeccion

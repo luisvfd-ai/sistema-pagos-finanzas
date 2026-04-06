@@ -3,7 +3,7 @@
 {% load money_filters %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'pagos/css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'pagos/css/dashboard.css' %}?v=mobile9">
 {% endblock %}
 
 {% block content %}
@@ -78,12 +78,54 @@
 
     <div class="section mt-5">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h2 class="mb-0">🏢 Resumen por unidad / lugar</h2>
+            <span class="text-muted small">Saldo pendiente agrupado por unidad operativa</span>
+        </div>
+
+        {% if resumen_unidades %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Unidad</th>
+                        <th>Compromisos</th>
+                        <th>Total plan</th>
+                        <th>Pagado</th>
+                        <th>Saldo</th>
+                        <th>Pend.</th>
+                        <th>Parc.</th>
+                        <th>Pag.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in resumen_unidades %}
+                    <tr>
+                        <td><strong>{{ u.unidad_negocio_label }}</strong></td>
+                        <td>{{ u.cantidad }}</td>
+                        <td>{{ u.total_compromiso|clp }}</td>
+                        <td class="ok">{{ u.pagado_real|clp }}</td>
+                        <td class="alert">{{ u.saldo_real|clp }}</td>
+                        <td>{{ u.pendientes }}</td>
+                        <td>{{ u.parciales }}</td>
+                        <td>{{ u.pagados }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p class="text-muted">No hay datos por unidad.</p>
+        {% endif %}
+    </div>
+
+    <div class="section mt-5">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <h2 class="mb-0">📌 Estado de compromisos</h2>
             <span class="text-muted small">Separación visual entre pendientes, parciales y pagados</span>
         </div>
 
         <div class="row g-3">
-            <div class="col-md-4">
+            <div class="col-12 col-md-4">
                 <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Pendientes</div>
                     <div class="fw-bold fs-3 text-danger">{{ resumen_estados.pendientes_count|default:0 }}</div>
@@ -91,7 +133,7 @@
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-12 col-md-4">
                 <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Parciales</div>
                     <div class="fw-bold fs-3 text-warning">{{ resumen_estados.parciales_count|default:0 }}</div>
@@ -99,7 +141,7 @@
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-12 col-md-4">
                 <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Pagados</div>
                     <div class="fw-bold fs-3 text-success">{{ resumen_estados.pagados_count|default:0 }}</div>
@@ -118,32 +160,32 @@
         </div>
 
         <div class="row g-3">
-            <div class="col-md-3">
-                <div class="border rounded p-3 h-100">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Vencidas</div>
                     <div class="fw-bold fs-4 text-danger">{{ alertas_resumen.vencidas_count }}</div>
                     <div class="small text-muted">{{ alertas_resumen.vencidas_monto|clp }}</div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="border rounded p-3 h-100">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Vencen hoy</div>
                     <div class="fw-bold fs-4 text-warning">{{ alertas_resumen.hoy_count }}</div>
                     <div class="small text-muted">{{ alertas_resumen.hoy_monto|clp }}</div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="border rounded p-3 h-100">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Próximas 3 días</div>
                     <div class="fw-bold fs-4 text-warning">{{ alertas_resumen.proximas_3_count }}</div>
                     <div class="small text-muted">{{ alertas_resumen.proximas_3_monto|clp }}</div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="border rounded p-3 h-100">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="border rounded p-3 h-100 bg-white">
                     <div class="text-muted small">Próximas 4 a 7 días</div>
                     <div class="fw-bold fs-4 text-primary">{{ alertas_resumen.proximas_7_count }}</div>
                     <div class="small text-muted">{{ alertas_resumen.proximas_7_monto|clp }}</div>
@@ -152,161 +194,439 @@
         </div>
     </div>
 
-    <div class="section mt-5">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <h2 class="mb-0">📋 Estado financiero operativo por compromiso</h2>
-            <span class="text-muted small">Aquí se muestran solo pendientes y parciales para dar foco operativo</span>
-        </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Compromiso</th>
-                    <th>Total plan</th>
-                    <th>Pagado real</th>
-                    <th>Saldo pendiente</th>
-                    <th>Estado</th>
-                    <th>Progreso</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for p in pagos %}
-                    {% if p.estado_real != 'PAGADO' %}
-                    <tr>
-                        <td>{{ p.nombre }}</td>
-
-                        <td>
-                            <strong>{{ p.total_compromiso|clp }}</strong>
-                            <div style="font-size: 11px; color:#6b7280;">
-                                Total de cuotas del plan
-                            </div>
-                        </td>
-
-                        <td class="ok">
-                            {{ p.pagado_real|clp }}
-                            <div style="font-size: 11px; color:#6b7280;">
-                                Pagos reales acumulados
-                            </div>
-                        </td>
-
-                        <td class="alert">
-                            {{ p.saldo_real|clp }}
-                            <div style="font-size: 11px; color:#6b7280;">
-                                Falta por pagar
-                            </div>
-                        </td>
-
-                        <td>
-                            {% if p.estado_real == 'PAGADO' %}
-                                <span class="badge bg-success">PAGADO</span>
-                            {% elif p.estado_real == 'PARCIAL' %}
-                                <span class="badge bg-warning text-dark">PARCIAL</span>
-                            {% else %}
-                                <span class="badge bg-danger">PENDIENTE</span>
-                            {% endif %}
-                        </td>
-
-                        <td style="width:180px">
-                            <div class="progress">
-                                <div class="progress-bar"
-                                     style="width: {{ p.porcentaje_pagado }}%">
-                                    {{ p.porcentaje_pagado }}%
-                                </div>
-                            </div>
-                        </td>
-
-                        <td style="width:170px">
-                            {% if user.is_superuser or perms.pagos.add_pagoreal %}
-                            <a class="btn btn-sm btn-success"
-                               href="{% url 'pagos_real_crear' %}?pago_id={{ p.id }}&next=dashboard_financiero">
-                                💳 Registrar pago
-                            </a>
-                            {% else %}
-                            <span class="text-muted small">Sin permiso</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endif %}
-                {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center text-muted">
-                            No existen compromisos.
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="section mt-5">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="mb-0">📋 Estado financiero operativo por compromiso</h2>
+        <span class="text-muted small">Aquí se muestran solo pendientes y parciales para dar foco operativo</span>
     </div>
 
-    <div class="section mt-5">
-        <h2>📈 Proyección (sumatoria de pagos pendientes por mes)</h2>
+    <div class="d-none d-md-block">
+        <div class="scroll-hint text-end mb-2">
+            ← desliza →
+        </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Compromiso</th>
+                        <th>Unidad</th>
+                        <th>Cuota actual</th>
+                        <th>Abonado cuota</th>
+                        <th>Saldo cuota</th>
+                        <th>Fecha cuota</th>
+                        <th>Saldo deuda</th>
+                        <th>Estado cuota</th>
+                        <th>Progreso</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for p in pagos %}
+                        {% if p.estado_real != 'PAGADO' %}
+                        <tr>
+                            <td>
+                                <strong>{{ p.nombre }}</strong>
+                                {% if p.cuota_actual_label %}
+                                <div class="small text-muted">Cuota operativa {{ p.cuota_actual_label }}</div>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ p.unidad_negocio_label|default:"Otros" }}
+                            </td>
+
+                            <td>
+                                <strong>{{ p.monto_cuota_actual|clp }}</strong>
+                                <div class="small text-muted">Monto de la cuota actual</div>
+                            </td>
+
+                            <td class="ok">
+                                {{ p.abonado_cuota_actual|clp }}
+                                <div class="small text-muted">Abonado a esta cuota</div>
+                            </td>
+
+                            <td class="alert">
+                                {{ p.saldo_cuota_actual|clp }}
+                                <div class="small text-muted">Falta de esta cuota</div>
+                            </td>
+
+                            <td>
+                                {% if p.fecha_cuota_actual %}
+                                    {{ p.fecha_cuota_actual|date:"d-m-Y" }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ p.saldo_real|clp }}
+                                <div class="small text-muted">Saldo total deuda</div>
+                            </td>
+
+                            <td>
+                                {% if p.estado_cuota_clase == 'success' %}
+                                    <span class="badge bg-success">{{ p.estado_cuota_actual|upper }}</span>
+                                {% elif p.estado_cuota_clase == 'warning' %}
+                                    <span class="badge bg-warning text-dark">{{ p.estado_cuota_actual|upper }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ p.estado_cuota_actual|upper }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td style="width:180px">
+                                <div class="progress">
+                                    <div class="progress-bar"
+                                         style="width: {{ p.porcentaje_pagado }}%">
+                                        {{ p.porcentaje_pagado }}%
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td style="width:170px">
+                                {% if user.is_superuser or perms.pagos.add_pagoreal %}
+                                <a class="btn btn-sm btn-success"
+                                   href="{% url 'pagos_real_crear' %}?pago_id={{ p.id }}&next=dashboard_financiero">
+                                    💳 Registrar pago
+                                </a>
+                                {% else %}
+                                <span class="text-muted small">Sin permiso</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center text-muted">
+                                No existen compromisos.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-block d-md-none">
+        {% for p in pagos %}
+            {% if p.estado_real != 'PAGADO' %}
+            <div class="mobile-payment-card">
+                <div class="mobile-payment-card__header">
+                    <div>
+                        <h3 class="mobile-payment-card__title">{{ p.nombre }}</h3>
+                        <div class="mobile-payment-card__subtitle">
+                            {{ p.unidad_negocio_label|default:"Otros" }}
+                        </div>
+                        {% if p.cuota_actual_label %}
+                        <div class="mobile-payment-card__subtitle">
+                            Cuota operativa {{ p.cuota_actual_label }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        {% if p.estado_cuota_clase == 'success' %}
+                            <span class="badge bg-success">{{ p.estado_cuota_actual|upper }}</span>
+                        {% elif p.estado_cuota_clase == 'warning' %}
+                            <span class="badge bg-warning text-dark">{{ p.estado_cuota_actual|upper }}</span>
+                        {% else %}
+                            <span class="badge bg-danger">{{ p.estado_cuota_actual|upper }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mobile-payment-card__amount">
+                    {{ p.monto_cuota_actual|clp }}
+                </div>
+
+                <div class="mobile-payment-card__meta">
+                    Cuota operativa actual
+                </div>
+
+                <div class="mobile-payment-card__grid">
+                    <div class="mobile-payment-card__item">
+                        <span class="label">Fecha cuota</span>
+                        <span class="value">
+                            {% if p.fecha_cuota_actual %}
+                                {{ p.fecha_cuota_actual|date:"d-m-Y" }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="mobile-payment-card__item">
+                        <span class="label">Unidad</span>
+                        <span class="value">{{ p.unidad_negocio_label|default:"Otros" }}</span>
+                    </div>
+
+                    <div class="mobile-payment-card__item">
+                        <span class="label">Abonado cuota</span>
+                        <span class="value value-ok">{{ p.abonado_cuota_actual|clp }}</span>
+                    </div>
+
+                    <div class="mobile-payment-card__item">
+                        <span class="label">Saldo cuota</span>
+                        <span class="value value-alert">{{ p.saldo_cuota_actual|clp }}</span>
+                    </div>
+
+                    <div class="mobile-payment-card__item">
+                        <span class="label">Saldo deuda</span>
+                        <span class="value">{{ p.saldo_real|clp }}</span>
+                    </div>
+                </div>
+
+                <div class="mobile-payment-card__progress">
+                    <div class="mobile-payment-card__progress-top">
+                        <span>Progreso</span>
+                        <strong>{{ p.porcentaje_pagado }}%</strong>
+                    </div>
+
+                    <div class="progress">
+                        <div class="progress-bar" style="width: {{ p.porcentaje_pagado }}%">
+                            {{ p.porcentaje_pagado }}%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mobile-payment-card__footer">
+                    {% if user.is_superuser or perms.pagos.add_pagoreal %}
+                    <a class="btn btn-success w-100 mobile-payment-card__btn"
+                       href="{% url 'pagos_real_crear' %}?pago_id={{ p.id }}&next=dashboard_financiero">
+                        💳 Registrar pago
+                    </a>
+                    {% else %}
+                    <span class="text-muted small">Sin permiso</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        {% empty %}
+            <div class="mobile-empty-state">
+                No existen compromisos.
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+    <div class="section section-chart mt-5">
+        <div class="section-heading">
+            <h2>📈 Proyección (sumatoria de pagos pendientes por mes)</h2>
+            <span class="text-muted small">Vista mensual de pagos pendientes proyectados</span>
+        </div>
 
         <script id="flujo-chart-data" type="application/json">{{ flujo_chart_json|default:"{}"|safe }}</script>
 
-        <div class="chart-container">
-            <canvas id="flujoChart"></canvas>
+        <div class="chart-shell">
+            <div class="chart-container">
+                <canvas id="flujoChart"></canvas>
+            </div>
         </div>
 
-        <div class="text-muted" style="font-size: 12px; margin-top: 10px;">
+        <div class="chart-note text-muted small mt-3">
             Este gráfico muestra el total mensual de pagos pendientes, calculado desde EventoPago (estado pendiente).
         </div>
     </div>
 
     <div class="section mt-5">
+    <div class="section-heading">
         <h2>🚨 Eventos vencidos</h2>
-
-        {% if eventos_vencidos %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Concepto</th>
-                        <th>Monto</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for e in eventos_vencidos %}
-                        <tr>
-                            <td class="alert">{{ e.fecha }}</td>
-                            <td>{{ e.pago.nombre }}</td>
-                            <td class="alert">{{ e.monto|clp }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p class="ok">✅ No existen pagos vencidos.</p>
-        {% endif %}
+        <span class="text-muted small">Compromisos ya vencidos y pendientes de regularización, agrupados por unidad</span>
     </div>
 
-    <div class="section mt-5">
+    {% if eventos_vencidos_agrupados %}
+        {% for unidad in eventos_vencidos_agrupados %}
+        <div class="dashboard-event-group dashboard-event-group--danger mb-4">
+            <div class="dashboard-event-group__header">
+                <div style="font-size:18px; font-weight:700;">{{ unidad.unidad }}</div>
+                <div style="margin-top:4px; font-size:13px; color:#d1d5db;">
+                    {{ unidad.cantidad }} evento(s) vencido(s) · Monto total: {{ unidad.monto_total|clp }}
+                </div>
+            </div>
+
+            <div class="d-none d-md-block">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Fecha</th>
+                                <th>Concepto</th>
+                                <th class="text-end" style="width: 170px;">Monto</th>
+                                <th style="width: 170px;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in unidad.eventos %}
+                            <tr>
+                                <td>{{ e.fecha|date:"d-m-Y" }}</td>
+                                <td>
+                                    <strong>{{ e.nombre }}</strong>
+                                    <div class="small text-muted">Unidad: {{ unidad.unidad }}</div>
+                                </td>
+                                <td class="text-end alert">{{ e.monto|clp }}</td>
+                                <td>
+                                    {% if user.is_superuser or perms.pagos.add_pagoreal %}
+                                        {% if e.pago_id %}
+                                        <a class="btn btn-sm btn-outline-danger"
+                                           href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next=dashboard_financiero">
+                                            Registrar pago
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted small">Sin vínculo</span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="text-muted small">Sin permiso</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="d-block d-md-none p-3">
+                {% for e in unidad.eventos %}
+                <div class="mobile-event-card mobile-event-card--danger">
+                    <div class="mobile-event-card__top">
+                        <span class="mobile-event-card__badge mobile-event-card__badge--danger">Vencido</span>
+                        <span class="mobile-event-card__date">{{ e.fecha|date:"d-m-Y" }}</span>
+                    </div>
+
+                    <h3 class="mobile-event-card__title">{{ e.nombre }}</h3>
+
+                    <div class="mobile-event-card__meta">
+                        Unidad: {{ unidad.unidad }}
+                    </div>
+
+                    <div class="mobile-event-card__amount mobile-event-card__amount--danger">
+                        {{ e.monto|clp }}
+                    </div>
+
+                    <div class="mobile-event-card__meta mb-3">
+                        Evento pendiente ya vencido
+                    </div>
+
+                    {% if user.is_superuser or perms.pagos.add_pagoreal %}
+                        {% if e.pago_id %}
+                        <a class="btn btn-outline-danger w-100"
+                           href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next=dashboard_financiero">
+                            Registrar pago
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="mobile-empty-state">
+            ✅ No existen eventos vencidos.
+        </div>
+    {% endif %}
+</div>
+
+<div class="section mt-5">
+    <div class="section-heading">
         <h2>📅 Próximos 7 días</h2>
-
-        {% if eventos_proximos %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Concepto</th>
-                        <th>Monto</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for e in eventos_proximos %}
-                        <tr>
-                            <td>{{ e.fecha }}</td>
-                            <td>{{ e.pago.nombre }}</td>
-                            <td>{{ e.monto|clp }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p class="ok">✅ No existen pagos próximos en los siguientes 7 días.</p>
-        {% endif %}
+        <span class="text-muted small">Eventos próximos agrupados por unidad para seguimiento inmediato</span>
     </div>
+
+    {% if eventos_proximos_agrupados %}
+        {% for unidad in eventos_proximos_agrupados %}
+        <div class="dashboard-event-group dashboard-event-group--primary mb-4">
+            <div class="dashboard-event-group__header">
+                <div style="font-size:18px; font-weight:700;">{{ unidad.unidad }}</div>
+                <div style="margin-top:4px; font-size:13px; color:#d1d5db;">
+                    {{ unidad.cantidad }} evento(s) próximo(s) · Monto total: {{ unidad.monto_total|clp }}
+                </div>
+            </div>
+
+            <div class="d-none d-md-block">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Fecha</th>
+                                <th>Concepto</th>
+                                <th class="text-end" style="width: 170px;">Monto</th>
+                                <th style="width: 170px;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in unidad.eventos %}
+                            <tr>
+                                <td>{{ e.fecha|date:"d-m-Y" }}</td>
+                                <td>
+                                    <strong>{{ e.nombre }}</strong>
+                                    <div class="small text-muted">Unidad: {{ unidad.unidad }}</div>
+                                </td>
+                                <td class="text-end">{{ e.monto|clp }}</td>
+                                <td>
+                                    {% if user.is_superuser or perms.pagos.add_pagoreal %}
+                                        {% if e.pago_id %}
+                                        <a class="btn btn-sm btn-outline-primary"
+                                           href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next=dashboard_financiero">
+                                            Registrar pago
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted small">Sin vínculo</span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="text-muted small">Sin permiso</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="d-block d-md-none p-3">
+                {% for e in unidad.eventos %}
+                <div class="mobile-event-card mobile-event-card--primary">
+                    <div class="mobile-event-card__top">
+                        <span class="mobile-event-card__badge mobile-event-card__badge--primary">Próximo</span>
+                        <span class="mobile-event-card__date">{{ e.fecha|date:"d-m-Y" }}</span>
+                    </div>
+
+                    <h3 class="mobile-event-card__title">{{ e.nombre }}</h3>
+
+                    <div class="mobile-event-card__meta">
+                        Unidad: {{ unidad.unidad }}
+                    </div>
+
+                    <div class="mobile-event-card__amount mobile-event-card__amount--primary">
+                        {{ e.monto|clp }}
+                    </div>
+
+                    <div class="mobile-event-card__meta mb-3">
+                        Pago próximo dentro de los siguientes 7 días
+                    </div>
+
+                    {% if user.is_superuser or perms.pagos.add_pagoreal %}
+                        {% if e.pago_id %}
+                        <a class="btn btn-outline-primary w-100"
+                           href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next=dashboard_financiero">
+                            Registrar pago
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="mobile-empty-state">
+            ✅ No existen pagos próximos en los siguientes 7 días.
+        </div>
+    {% endif %}
+</div>
 
 </div>
 

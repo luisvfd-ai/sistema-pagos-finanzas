@@ -6,14 +6,43 @@
     margin-bottom: 26px;
 }
 
+.reportes-header h3 {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
 .filters {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+    align-items: end;
+}
+
+.filter-field {
+    min-width: 180px;
 }
 
 .filters .form-control {
-    max-width: 200px;
+    max-width: 220px;
+}
+
+.filter-actions {
+    display: flex;
+    align-items: end;
+}
+
+.export-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.export-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .kpi-grid {
@@ -26,6 +55,7 @@
     background: #f9fafb;
     border-radius: 16px;
     padding: 18px;
+    border: 1px solid #eef2f7;
 }
 
 .kpi-title {
@@ -37,6 +67,19 @@
     font-size: 24px;
     font-weight: 700;
     margin-top: 4px;
+    line-height: 1.15;
+    word-break: break-word;
+}
+
+.chart-shell {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 14px;
+}
+
+.chart-box {
+    height: 320px;
 }
 
 .table-exec th {
@@ -48,4 +91,336 @@
 
 .table-exec td {
     vertical-align: middle;
+}
+
+.table-exec td:nth-child(2) {
+    word-break: break-word;
+}
+
+/* =========================
+   CONTROL RESPONSIVE
+========================= */
+
+.report-table-desktop {
+    display: block;
+}
+
+.report-cards-mobile {
+    display: none;
+}
+
+/* =========================
+   MOBILE CARDS
+========================= */
+
+.report-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.report-mobile-card:last-child {
+    margin-bottom: 0;
+}
+
+.report-mobile-card--compact .report-mobile-card__top {
+    margin-bottom: 10px;
+}
+
+.report-mobile-card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.report-mobile-card__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: #111827;
+    word-break: break-word;
+}
+
+.report-mobile-card__meta {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.report-mobile-card__amount {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #111827;
+    text-align: right;
+    word-break: break-word;
+}
+
+.report-mobile-card__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.report-mobile-card__item {
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    border-radius: 14px;
+    padding: 12px;
+}
+
+.report-mobile-card__item--full {
+    grid-column: 1 / -1;
+}
+
+.report-mobile-card__item .label {
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.report-mobile-card__item .value {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    word-break: break-word;
+    color: #111827;
+}
+
+.report-mobile-card__item .value-muted {
+    color: #4b5563;
+    font-weight: 600;
+}
+
+.report-mobile-card__actions .btn {
+    width: 100%;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 700;
+}
+
+.report-total-mobile {
+    background: #111827;
+    color: #ffffff;
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.report-total-mobile .label {
+    font-size: 12px;
+    letter-spacing: .05em;
+    font-weight: 700;
+}
+
+.report-total-mobile strong {
+    font-size: 18px;
+    line-height: 1.2;
+    word-break: break-word;
+    text-align: right;
+}
+
+/* =========================
+   TABLET
+========================= */
+
+@media (max-width: 992px) {
+    .report-card {
+        padding: 20px;
+    }
+
+    .reportes-header h3 {
+        font-size: 1.7rem;
+    }
+
+    .chart-box {
+        height: 280px;
+    }
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 768px) {
+    .reportes-page {
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+
+    .reportes-header h3 {
+        font-size: 1.35rem;
+        line-height: 1.2;
+    }
+
+    .report-card {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-field,
+    .filter-actions,
+    .filters .form-control {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .filter-actions .btn {
+        width: 100%;
+        min-height: 48px;
+        font-weight: 700;
+    }
+
+    .export-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .export-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+    }
+
+    .export-actions .btn {
+        width: 100%;
+        min-height: 44px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .chart-shell {
+        padding: 10px;
+        border-radius: 16px;
+    }
+
+    .chart-box {
+        height: 260px;
+    }
+
+    .report-table-desktop {
+        display: none;
+    }
+
+    .report-cards-mobile {
+        display: block;
+    }
+
+    .report-mobile-card {
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    .report-mobile-card__title {
+        font-size: 15px;
+    }
+
+    .report-mobile-card__amount {
+        font-size: 16px;
+    }
+}
+
+/* =========================
+   SMALL MOBILE
+========================= */
+
+@media (max-width: 576px) {
+    .reportes-page {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .report-card {
+        padding: 14px;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .export-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-box {
+        height: 240px;
+    }
+
+    .report-mobile-card__top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .report-mobile-card__amount {
+        text-align: left;
+        font-size: 20px;
+    }
+
+    .report-mobile-card__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .report-mobile-card__item--full {
+        grid-column: auto;
+    }
+
+    .report-total-mobile {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .report-total-mobile strong {
+        text-align: left;
+        font-size: 20px;
+    }
+}
+
+/* =========================
+   FILTRO ACTIVO / RESUMEN UNIDAD
+========================= */
+
+.report-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.report-filter-badge strong {
+    color: #1e3a8a;
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .report-filter-badge {
+        width: 100%;
+        justify-content: center;
+        border-radius: 14px;
+    }
 }

@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+{% load static %}
+{% load money_filters %}
+
+{% block title %}Unidades de negocio{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pagos/css/forms.css' %}?v=unidades_lista2">
+
+<style>
+    .unidades-page {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 24px 16px 40px;
+    }
+
+    .unidades-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 22px;
+    }
+
+    .unidades-header__text h2 {
+        margin: 0 0 6px 0;
+        font-size: 32px;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .unidades-header__text p {
+        margin: 0;
+        color: #64748b;
+    }
+
+    .unidades-summary {
+        margin-bottom: 22px;
+    }
+
+    .unidades-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+    }
+
+    .unidades-card__body {
+        padding: 0;
+    }
+
+    .unidades-table-wrap {
+        overflow-x: auto;
+    }
+
+    .unidades-table {
+        width: 100%;
+        min-width: 980px;
+        margin: 0;
+    }
+
+    .unidades-table thead th {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: #64748b;
+        background: #f8fafc;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 14px 16px;
+        white-space: nowrap;
+    }
+
+    .unidades-table tbody td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #eef2f7;
+        vertical-align: middle;
+    }
+
+    .unidades-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .unidades-table tbody tr:hover {
+        background: #fafcff;
+    }
+
+    .unidades-name {
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .unidades-code {
+        display: inline-block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        border-radius: 999px;
+        padding: 4px 10px;
+    }
+
+    .unidades-desc {
+        color: #64748b;
+        font-size: 13px;
+        max-width: 360px;
+        white-space: normal;
+    }
+
+    .unidades-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .unidades-actions form {
+        margin: 0;
+    }
+
+    .unidades-mobile {
+        display: none;
+        padding: 16px;
+        gap: 14px;
+        flex-direction: column;
+    }
+
+    .unidad-mobile-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        background: #fff;
+        padding: 16px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    }
+
+    .unidad-mobile-card__top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .unidad-mobile-card__title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .unidad-mobile-card__code {
+        margin-top: 6px;
+    }
+
+    .unidad-mobile-card__desc {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 12px;
+    }
+
+    .unidad-mobile-card__grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 14px;
+        margin-bottom: 14px;
+    }
+
+    .unidad-mobile-card__item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .unidad-mobile-card__item .label {
+        font-size: 12px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .unidad-mobile-card__item .value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .unidad-mobile-card__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .unidad-mobile-card__actions form {
+        margin: 0;
+    }
+
+    .unidades-empty {
+        padding: 40px 20px;
+        text-align: center;
+        color: #64748b;
+    }
+
+    @media (max-width: 991px) {
+        .unidades-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .unidades-header .btn {
+            width: 100%;
+        }
+
+        .unidades-table-wrap {
+            display: none;
+        }
+
+        .unidades-mobile {
+            display: flex;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .unidades-page {
+            padding: 16px 12px 28px;
+        }
+
+        .unidades-header__text h2 {
+            font-size: 26px;
+        }
+
+        .unidad-mobile-card__grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="unidades-page">
+
+    <div class="unidades-header">
+        <div class="unidades-header__text">
+            <h2>🏷️ Unidades de negocio</h2>
+            <p>
+                Administra las unidades que se usan en formularios, filtros, reportes,
+                dashboard, alertas e importaciones.
+            </p>
+        </div>
+
+        <div>
+            <a href="{% url 'unidades_negocio_crear' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Nueva unidad
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 unidades-summary">
+        <div class="col-12 col-md-4">
+            <div class="card border-primary shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Total unidades</div>
+                    <div class="fs-3 fw-bold text-primary">{{ total_unidades }}</div>
+                    <div class="small text-muted">Registradas en el sistema</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-success shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Activas</div>
+                    <div class="fs-3 fw-bold text-success">{{ total_activas }}</div>
+                    <div class="small text-muted">Disponibles para uso operativo</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-secondary shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Con compromisos</div>
+                    <div class="fs-3 fw-bold text-dark">{{ total_con_uso }}</div>
+                    <div class="small text-muted">Revisar desde la tabla inferior</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="unidades-card">
+        <div class="unidades-card__body">
+
+            {% if unidades %}
+                <div class="unidades-table-wrap">
+                    <table class="table unidades-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Código</th>
+                                <th>Orden</th>
+                                <th>Estado</th>
+                                <th>Compromisos</th>
+                                <th>Descripción</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in unidades %}
+                            <tr>
+                                <td>
+                                    <div class="unidades-name">{{ u.nombre }}</div>
+                                </td>
+                                <td>
+                                    <span class="unidades-code">{{ u.codigo }}</span>
+                                </td>
+                                <td>{{ u.orden }}</td>
+                                <td>
+                                    {% if u.activa %}
+                                        <span class="badge bg-success">Activa</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactiva</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ u.total_compromisos_count }}</td>
+                                <td>
+                                    <div class="unidades-desc">
+                                        {% if u.descripcion %}
+                                            {{ u.descripcion }}
+                                        {% else %}
+                                            <span class="text-muted">Sin descripción</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <div class="unidades-actions">
+                                        <a href="{% url 'unidades_negocio_editar' u.id %}"
+                                           class="btn btn-sm btn-outline-warning">
+                                            <i class="fas fa-pen me-1"></i> Editar
+                                        </a>
+
+                                        <form method="post" action="{% url 'unidades_negocio_toggle' u.id %}">
+                                            {% csrf_token %}
+                                            {% if u.activa %}
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-ban me-1"></i> Desactivar
+                                            </button>
+                                            {% else %}
+                                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-check me-1"></i> Activar
+                                            </button>
+                                            {% endif %}
+                                        </form>
+
+                                        <form method="post" action="{% url 'unidades_negocio_eliminar' u.id %}"
+                                              onsubmit="return confirm('¿Seguro que deseas eliminar esta unidad?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    {% if u.total_compromisos_count > 0 %}disabled{% endif %}>
+                                                <i class="fas fa-trash me-1"></i> Eliminar
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="unidades-mobile">
+                    {% for u in unidades %}
+                    <div class="unidad-mobile-card">
+                        <div class="unidad-mobile-card__top">
+                            <div>
+                                <h3 class="unidad-mobile-card__title">{{ u.nombre }}</h3>
+                                <div class="unidad-mobile-card__code">
+                                    <span class="unidades-code">{{ u.codigo }}</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                {% if u.activa %}
+                                    <span class="badge bg-success">Activa</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactiva</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="unidad-mobile-card__desc">
+                            {% if u.descripcion %}
+                                {{ u.descripcion }}
+                            {% else %}
+                                Sin descripción
+                            {% endif %}
+                        </div>
+
+                        <div class="unidad-mobile-card__grid">
+                            <div class="unidad-mobile-card__item">
+                                <span class="label">Orden</span>
+                                <span class="value">{{ u.orden }}</span>
+                            </div>
+                            <div class="unidad-mobile-card__item">
+                                <span class="label">Compromisos</span>
+                                <span class="value">{{ u.total_compromisos_count }}</span>
+                            </div>
+                        </div>
+
+                        <div class="unidad-mobile-card__actions">
+                            <a href="{% url 'unidades_negocio_editar' u.id %}"
+                               class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-pen me-1"></i> Editar
+                            </a>
+
+                            <form method="post" action="{% url 'unidades_negocio_toggle' u.id %}">
+                                {% csrf_token %}
+                                {% if u.activa %}
+                                <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                                    <i class="fas fa-ban me-1"></i> Desactivar
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-outline-success btn-sm w-100">
+                                    <i class="fas fa-check me-1"></i> Activar
+                                </button>
+                                {% endif %}
+                            </form>
+
+                            <form method="post" action="{% url 'unidades_negocio_eliminar' u.id %}"
+                                  onsubmit="return confirm('¿Seguro que deseas eliminar esta unidad?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm w-100"
+                                        {% if u.total_compromisos_count > 0 %}disabled{% endif %}>
+                                    <i class="fas fa-trash me-1"></i> Eliminar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            {% else %}
+                <div class="unidades-empty">
+                    <div class="mb-2 fw-semibold">No hay unidades registradas todavía.</div>
+                    <div class="small mb-3">Crea la primera unidad para empezar a organizar dashboard, reportes y formularios.</div>
+                    <a href="{% url 'unidades_negocio_crear' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> Crear primera unidad
+                    </a>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pagos/css/forms.css' %}?v=unidades2">
+
+<style>
+    .unidad-form-page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 16px 40px;
+    }
+
+    .unidad-form-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .unidad-form-header__text h2 {
+        margin: 0 0 6px 0;
+        font-size: 32px;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .unidad-form-header__text p {
+        margin: 0;
+        color: #64748b;
+    }
+
+    .unidad-form-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        padding: 28px;
+    }
+
+    .unidad-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px 24px;
+    }
+
+    .unidad-form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .unidad-form-field--full {
+        grid-column: 1 / -1;
+    }
+
+    .unidad-form-label {
+        font-size: 14px;
+        font-weight: 700;
+        color: #334155;
+        margin: 0;
+    }
+
+    .unidad-form-help {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 2px;
+    }
+
+    .unidad-form-card input[type="text"],
+    .unidad-form-card input[type="number"],
+    .unidad-form-card textarea,
+    .unidad-form-card select {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #0f172a;
+        padding: 10px 12px;
+        font-size: 14px;
+        outline: none;
+        box-shadow: none;
+    }
+
+    .unidad-form-card textarea {
+        min-height: 110px;
+        resize: vertical;
+    }
+
+    .unidad-form-card input:focus,
+    .unidad-form-card textarea:focus,
+    .unidad-form-card select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .unidad-form-check-wrap {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+        padding-top: 28px;
+    }
+
+    .unidad-form-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        background: #f8fafc;
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .unidad-form-check input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+    }
+
+    .unidad-form-check label {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+    }
+
+    .unidad-form-errors {
+        color: #dc2626;
+        font-size: 12px;
+        margin-top: 2px;
+    }
+
+    .unidad-form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    @media (max-width: 768px) {
+        .unidad-form-page {
+            padding: 16px 12px 28px;
+        }
+
+        .unidad-form-card {
+            padding: 18px;
+            border-radius: 14px;
+        }
+
+        .unidad-form-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .unidad-form-check-wrap {
+            padding-top: 0;
+        }
+
+        .unidad-form-actions {
+            flex-direction: column;
+        }
+
+        .unidad-form-actions .btn {
+            width: 100%;
+        }
+
+        .unidad-form-header__text h2 {
+            font-size: 26px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="unidad-form-page">
+
+    <div class="unidad-form-header">
+        <div class="unidad-form-header__text">
+            <h2>{{ titulo }}</h2>
+            <p>
+                Configura una unidad de negocio para usarla en formularios, filtros, reportes,
+                alertas y organización operativa del sistema.
+            </p>
+        </div>
+    </div>
+
+    <div class="unidad-form-card">
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-4">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="unidad-form-grid">
+
+                <div class="unidad-form-field">
+                    <label class="unidad-form-label" for="{{ form.nombre.id_for_label }}">Nombre</label>
+                    {{ form.nombre }}
+                    {% if form.nombre.errors %}
+                        <div class="unidad-form-errors">{{ form.nombre.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="unidad-form-field">
+                    <label class="unidad-form-label" for="{{ form.codigo.id_for_label }}">Código</label>
+                    {{ form.codigo }}
+                    <div class="unidad-form-help">
+                        Se usa internamente en filtros e importaciones. Idealmente corto y sin espacios.
+                    </div>
+                    {% if form.codigo.errors %}
+                        <div class="unidad-form-errors">{{ form.codigo.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="unidad-form-field">
+                    <label class="unidad-form-label" for="{{ form.orden.id_for_label }}">Orden</label>
+                    {{ form.orden }}
+                    {% if form.orden.errors %}
+                        <div class="unidad-form-errors">{{ form.orden.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="unidad-form-check-wrap">
+                    <div class="unidad-form-check">
+                        {{ form.activa }}
+                        <label for="{{ form.activa.id_for_label }}">Unidad activa</label>
+                    </div>
+                    {% if form.activa.errors %}
+                        <div class="unidad-form-errors">{{ form.activa.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="unidad-form-field unidad-form-field--full">
+                    <label class="unidad-form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
+                    {{ form.descripcion }}
+                    {% if form.descripcion.errors %}
+                        <div class="unidad-form-errors">{{ form.descripcion.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="unidad-form-actions">
+                <a href="{% url 'unidades_negocio_lista' %}" class="btn btn-light">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Guardar unidad</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

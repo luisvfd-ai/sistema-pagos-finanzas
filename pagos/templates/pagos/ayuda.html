@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ayuda | Sistema Financiero{% endblock %}
+
+{% block content %}
+<div class="ayuda-page container-fluid mt-4">
+    <div class="ayuda-hero mb-4">
+        <div class="ayuda-hero__title">Centro de ayuda del sistema</div>
+        <p class="ayuda-hero__subtitle">
+            Manual práctico y preguntas frecuentes para usar el sistema de forma correcta,
+            especialmente en la gestión diaria de deudas, pagos, importaciones y configuración base.
+        </p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-xl-3">
+            <div class="ayuda-card ayuda-indice">
+                <div class="card-body">
+                    <div class="ayuda-card__title">Índice rápido</div>
+                    <p class="ayuda-card__text mb-3">Accede directo al tema que necesitas revisar.</p>
+
+                    <a href="#manual-dashboard"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+                    <a href="#manual-alertas"><i class="fas fa-bell"></i><span>Alertas</span></a>
+                    <a href="#manual-cuentas"><i class="fas fa-list"></i><span>Cuentas por pagar</span></a>
+                    <a href="#manual-pagos"><i class="fas fa-credit-card"></i><span>Registrar pago</span></a>
+                    <a href="#manual-importacion"><i class="fas fa-file-import"></i><span>Importación Excel</span></a>
+                    <a href="#manual-empresa"><i class="fas fa-building"></i><span>Empresa</span></a>
+                    <a href="#manual-conciliacion"><i class="fas fa-scale-balanced"></i><span>Cartolas y conciliación</span></a>
+                    <a href="#faq"><i class="fas fa-circle-question"></i><span>FAQ</span></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-9">
+            <div class="ayuda-card mb-4">
+                <div class="card-body">
+                    <div class="ayuda-card__title">Cómo usar esta sección</div>
+                    <p class="ayuda-card__text mb-3">
+                        Esta página resume la lógica operativa del sistema actual. No reemplaza la capacitación,
+                        pero sí sirve como guía rápida para resolver dudas habituales dentro de la app.
+                    </p>
+                    <div class="ayuda-tip">
+                        <strong>Recomendación:</strong> para la gestión diaria, el flujo principal del sistema suele ser:
+                        <em>Dashboard → Alertas → Cuentas por pagar → Registrar pago → Reportes</em>.
+                    </div>
+                </div>
+            </div>
+
+            <div id="manual-dashboard" class="card ayuda-seccion">
+                <div class="card-header"><h3>Dashboard</h3></div>
+                <div class="card-body">
+                    <ul>
+                        <li>Entrega una visión ejecutiva general del estado financiero actual.</li>
+                        <li>Está pensado para revisar indicadores globales, compromisos, proyección y riesgo financiero.</li>
+                        <li>No reemplaza la gestión detallada: para trabajar deuda por deuda, la pantalla principal es <strong>Cuentas por pagar</strong>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="manual-alertas" class="card ayuda-seccion">
+                <div class="card-header"><h3>Alertas</h3></div>
+                <div class="card-body">
+                    <ul>
+                        <li>Muestra compromisos vencidos, de hoy y próximos según urgencia operativa.</li>
+                        <li>Su objetivo es priorizar la acción, no hacer análisis histórico.</li>
+                        <li>Cuando un compromiso tiene abonos, lo importante es el <strong>saldo pendiente real</strong>, no solo el monto original.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="manual-cuentas" class="card ayuda-seccion">
+                <div class="card-header"><h3>Cuentas por pagar</h3></div>
+                <div class="card-body">
+                    <ul>
+                        <li>Es la herramienta principal de gestión operativa de deudas financieras.</li>
+                        <li>Permite filtrar por unidad, tipo, estado, activo y búsqueda libre.</li>
+                        <li>La tabla se centra en la <strong>cuota operativa actual</strong>, el abonado de esa cuota, el saldo cuota y el saldo total pendiente.</li>
+                        <li>Los KPI superiores cambian según el filtro aplicado, por lo que también funciona como reporte rápido filtrado.</li>
+                        <li>La exportación a Excel, CSV y PDF respeta la vista filtrada actual.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="manual-pagos" class="card ayuda-seccion">
+                <div class="card-header"><h3>Registrar pago</h3></div>
+                <div class="card-body">
+                    <ul>
+                        <li>Sirve para registrar pagos reales y también abonos parciales.</li>
+                        <li>Un compromiso no se considera totalmente resuelto hasta que el saldo real quede en cero.</li>
+                        <li>Si registras un abono, el sistema conserva trazabilidad histórica del pago y ajusta la lectura operativa.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="manual-importacion" class="card ayuda-seccion">
+                <div class="card-header"><h3>Importación Excel</h3></div>
+                <div class="card-body">
+                    <ul>
+                        <li>Permite carga masiva de compromisos y, según configuración, pagos reales.</li>
+                        <li>Primero se revisa una vista previa antes de confirmar la importación.</li>
+                        <li>El historial de importaciones permite revisar qué se cargó y revertir si corresponde.</li>
+                        <li>Conviene respetar siempre la plantilla oficial para evitar errores de columnas o formatos.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="manual-empresa" class="card ayuda-seccion">
+                <div class="card-header"><h3>Empresa</h3></div>
+                <div class="card-body">
+                    <ul>
+                        <li>Guarda los datos institucionales básicos de la empresa única actual.</li>
+                        <li>Esta sección no es multiempresa: es una configuración base para la instalación actual.</li>
+                        <li>El logo y nombre de empresa ayudan a dar identidad visual al sistema y se pueden usar luego en reportes o documentos.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="manual-conciliacion" class="card ayuda-seccion">
+                <div class="card-header"><h3>Cartolas y conciliación bancaria</h3></div>
+                <div class="card-body">
+                    <ul>
+                        <li>Sirve para trabajar movimientos bancarios importados y relacionarlos con pagos reales registrados.</li>
+                        <li>Ayuda a validar si lo que salió del banco coincide con lo que se registró en el sistema.</li>
+                        <li>Es un bloque complementario de control, no el centro de la gestión diaria.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="faq" class="ayuda-seccion mt-4">
+                <div class="ayuda-card mb-3">
+                    <div class="card-body">
+                        <div class="ayuda-card__title">Preguntas frecuentes</div>
+                        <p class="ayuda-card__text">Dudas comunes sobre la lógica del sistema y su uso diario.</p>
+                    </div>
+                </div>
+
+                <div class="accordion ayuda-acordeon" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq1h">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" aria-expanded="true" aria-controls="faq1">
+                                ¿Qué diferencia hay entre deuda total y cuota operativa?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse show" aria-labelledby="faq1h" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                La <strong>deuda total</strong> representa el saldo global pendiente del compromiso. La <strong>cuota operativa</strong> corresponde al evento o cuota actual que interesa gestionar hoy a nivel operativo.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq2h">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" aria-expanded="false" aria-controls="faq2">
+                                ¿Qué significa pendiente, parcial y pagado?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" aria-labelledby="faq2h" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <strong>Pendiente</strong> significa sin pagos registrados; <strong>parcial</strong>, que existen abonos pero aún queda saldo; y <strong>pagado</strong>, que el saldo pendiente real ya llegó a cero.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq3h">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3" aria-expanded="false" aria-controls="faq3">
+                                ¿Qué exporta la pantalla Cuentas por pagar?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" aria-labelledby="faq3h" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Exporta exactamente la vista filtrada actual, incluyendo los filtros activos que el usuario aplicó en ese momento.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq4h">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4" aria-expanded="false" aria-controls="faq4">
+                                ¿Cómo registro un abono en vez de un pago completo?
+                            </button>
+                        </h2>
+                        <div id="faq4" class="accordion-collapse collapse" aria-labelledby="faq4h" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Ingresa el monto efectivamente pagado en <strong>Registrar pago</strong>. Si no cubre todo el saldo, el sistema mantendrá el compromiso como parcial y conservará el historial del abono realizado.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq5h">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5" aria-expanded="false" aria-controls="faq5">
+                                ¿Qué pasa si una deuda ya fue pagada totalmente?
+                            </button>
+                        </h2>
+                        <div id="faq5" class="accordion-collapse collapse" aria-labelledby="faq5h" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Si el compromiso quedó completamente cubierto, pasa a estado pagado. Dependiendo del filtro, puede verse u ocultarse desde la vista operativa.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq6h">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6" aria-expanded="false" aria-controls="faq6">
+                                ¿Cómo modifico nombre, RUT o logo de la empresa?
+                            </button>
+                        </h2>
+                        <div id="faq6" class="accordion-collapse collapse" aria-labelledby="faq6h" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Entra a <strong>Empresa</strong>, actualiza los campos necesarios y guarda nuevamente. Es una configuración institucional base de la empresa única actual.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

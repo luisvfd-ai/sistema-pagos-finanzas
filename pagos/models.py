@@ -2,9 +2,175 @@ from decimal import Decimal
 import hashlib
 
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
+from django.utils.text import slugify
+
+
+LEGACY_UNIDAD_NEGOCIO_CHOICES = [
+    ('terminal', 'Terminal'),
+    ('cauquenes', 'Cauquenes'),
+    ('alerce', 'Alerce'),
+    ('pitrufquen', 'Pitrufquén'),
+    ('pasmar', 'Pasmar'),
+    ('valdivia', 'Valdivia'),
+    ('espacio_costanera', 'Espacio Costanera'),
+    ('costanera_ampliacion', 'Costanera Ampliación'),
+    ('mall_castro', 'Mall Castro'),
+    ('carolina', 'Carolina'),
+    ('oficina', 'Oficina'),
+    ('imposiciones', 'Imposiciones'),
+    ('iva', 'IVA'),
+    ('vivian', 'Vivian'),
+    ('tottus', 'Tottus'),
+    ('otros', 'Otros'),
+]
+
+
+def _normalizar_codigo_unidad(raw: str) -> str:
+    raw = (raw or '').strip().lower().replace('-', '_').replace(' ', '_')
+    if not raw:
+        return 'otros'
+    return slugify(raw).replace('-', '_') or 'otros'
+
+
+def unidad_negocio_label_from_codigo(codigo: str) -> str:
+    codigo = _normalizar_codigo_unidad(codigo)
+    try:
+        unidad = UnidadNegocio.objects.filter(codigo=codigo).first()
+        if unidad:
+            return unidad.nombre
+    except Exception:
+        pass
+
+    mapa = dict(LEGACY_UNIDAD_NEGOCIO_CHOICES)
+    if codigo in mapa:
+        return mapa[codigo]
+
+    return codigo.replace('_', ' ').strip().title() or 'Otros'
+
+
+def unidades_negocio_disponibles(incluir_inactivas: bool = False):
+    try:
+        qs = UnidadNegocio.objects.all().order_by('orden', 'nombre', 'id')
+        if not incluir_inactivas:
+            qs = qs.filter(activa=True)
+
+        data = [
+            {'value': u.codigo, 'label': u.nombre}
+            for u in qs
+        ]
+
+        if not data:
+            return [
+                {'value': value, 'label': label}
+                for value, label in LEGACY_UNIDAD_NEGOCIO_CHOICES
+            ]
+
+        if not any(item['value'] == 'otros' for item in data):
+            data.append({'value': 'otros', 'label': 'Otros'})
+
+        return data
+    except Exception:
+        return [
+            {'value': value, 'label': label}
+            for value, label in LEGACY_UNIDAD_NEGOCIO_CHOICES
+        ]
+
+
+class UnidadNegocio(models.Model):
+    nombre = models.CharField(max_length=120)
+    codigo = models.SlugField(max_length=40, unique=True)
+    descripcion = models.TextField(blank=True)
+    activa = models.BooleanField(default=True)
+    orden = models.PositiveIntegerField(default=0)
+    legacy_key = models.CharField(max_length=40, blank=True, default='')
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['orden', 'nombre', 'id']
+        verbose_name = 'Unidad de negocio'
+        verbose_name_plural = 'Unidades de negocio'
+
+    def __str__(self):
+        return self.nombre
+
+    def save(self, *args, **kwargs):
+        old_codigo = None
+        if self.pk:
+            old_codigo = UnidadNegocio.objects.filter(pk=self.pk).values_list('codigo', flat=True).first()
+
+        self.nombre = (self.nombre or '').strip() or 'Unidad'
+        self.codigo = _normalizar_codigo_unidad(self.codigo or self.nombre)
+        self.legacy_key = (self.legacy_key or self.codigo or '').strip()
+
+        super().save(*args, **kwargs)
+
+        if old_codigo != self.codigo:
+            try:
+                PagoProgramado.objects.filter(unidad_negocio_ref=self).update(unidad_negocio=self.codigo)
+            except Exception:
+                pass
+
+    @property
+    def total_compromisos(self):
+        try:
+            return self.pagos_programados.count()
+        except Exception:
+            return 0
+
+
+class EmpresaConfig(models.Model):
+    config_key = models.PositiveSmallIntegerField(default=1, unique=True, editable=False)
+    nombre_empresa = models.CharField(max_length=160, default='Mi empresa')
+    razon_social = models.CharField(max_length=180, blank=True, default='')
+    rut = models.CharField(max_length=20, blank=True, default='')
+    giro = models.CharField(max_length=180, blank=True, default='')
+    email = models.EmailField(blank=True, default='')
+    telefono = models.CharField(max_length=40, blank=True, default='')
+    direccion = models.CharField(max_length=220, blank=True, default='')
+    ciudad = models.CharField(max_length=120, blank=True, default='')
+    logo = models.FileField(
+        upload_to='empresa/logos/',
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['png', 'jpg', 'jpeg', 'svg', 'webp'])],
+        verbose_name='Logo',
+        help_text='Formatos permitidos: PNG, JPG, JPEG, SVG o WEBP.'
+    )
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'Configuración de empresa'
+        verbose_name_plural = 'Configuración de empresa'
+
+    def __str__(self):
+        return self.nombre_empresa or self.razon_social or 'Empresa'
+
+    @classmethod
+    def get_solo(cls):
+        return cls.objects.order_by('id').first()
+
+    @property
+    def display_name(self):
+        return (self.nombre_empresa or self.razon_social or 'Finanzas').strip()
+
+    def save(self, *args, **kwargs):
+        self.config_key = 1
+        self.nombre_empresa = (self.nombre_empresa or '').strip() or 'Mi empresa'
+        self.razon_social = (self.razon_social or '').strip()
+        self.rut = (self.rut or '').strip()
+        self.giro = (self.giro or '').strip()
+        self.email = (self.email or '').strip()
+        self.telefono = (self.telefono or '').strip()
+        self.direccion = (self.direccion or '').strip()
+        self.ciudad = (self.ciudad or '').strip()
+        super().save(*args, **kwargs)
 
 
 class PagoProgramado(models.Model):
@@ -24,6 +190,8 @@ class PagoProgramado(models.Model):
         ('unico', 'Único'),
     ]
 
+    UNIDAD_NEGOCIO_CHOICES = LEGACY_UNIDAD_NEGOCIO_CHOICES
+
     nombre = models.CharField(max_length=120)
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
     monto = models.DecimalField(max_digits=12, decimal_places=0)
@@ -32,12 +200,57 @@ class PagoProgramado(models.Model):
     total_cuotas = models.PositiveIntegerField()
     cuotas_restantes = models.PositiveIntegerField()
     descripcion = models.TextField(blank=True)
+    unidad_negocio_ref = models.ForeignKey(
+        UnidadNegocio,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='pagos_programados',
+        verbose_name='Unidad / lugar'
+    )
+    unidad_negocio = models.CharField(
+        max_length=40,
+        choices=UNIDAD_NEGOCIO_CHOICES,
+        default='otros',
+        blank=True,
+        verbose_name='Unidad / lugar'
+    )
     activo = models.BooleanField(default=True)
 
     creado = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.nombre} - ${self.monto}"
+
+    @classmethod
+    def unidades_negocio_disponibles(cls, incluir_inactivas: bool = False):
+        return unidades_negocio_disponibles(incluir_inactivas=incluir_inactivas)
+
+    def unidad_negocio_codigo_actual(self):
+        if getattr(self, 'unidad_negocio_ref_id', None) and getattr(self, 'unidad_negocio_ref', None):
+            return self.unidad_negocio_ref.codigo or 'otros'
+        return _normalizar_codigo_unidad(self.unidad_negocio or 'otros')
+
+    def unidad_negocio_label_actual(self):
+        if getattr(self, 'unidad_negocio_ref_id', None) and getattr(self, 'unidad_negocio_ref', None):
+            return self.unidad_negocio_ref.nombre or 'Otros'
+        return unidad_negocio_label_from_codigo(self.unidad_negocio or 'otros')
+
+    def save(self, *args, **kwargs):
+        codigo = _normalizar_codigo_unidad(self.unidad_negocio or 'otros')
+
+        if self.unidad_negocio_ref_id and getattr(self, 'unidad_negocio_ref', None):
+            codigo = self.unidad_negocio_ref.codigo or codigo or 'otros'
+        else:
+            try:
+                unidad = UnidadNegocio.objects.filter(codigo=codigo).first()
+                if unidad:
+                    self.unidad_negocio_ref = unidad
+            except Exception:
+                pass
+
+        self.unidad_negocio = codigo or 'otros'
+        super().save(*args, **kwargs)
 
     def total_pagado(self, excluir_pago_real_id=None):
         pagos_qs = self.pagos_realizados.all()
@@ -136,10 +349,6 @@ class PagoReal(models.Model):
         return f"{self.pago.nombre} - ${self.monto} ({self.fecha_pago})"
 
 
-# ==================================================
-# HISTORIAL DE IMPORTACIONES
-# ==================================================
-
 class ImportacionPago(models.Model):
 
     ESTADO_CHOICES = [
@@ -226,7 +435,7 @@ class ImportacionPagoDetalle(models.Model):
         related_name='detalles_importacion'
     )
 
-    descripcion = models.CharField(max_length=180, blank=True, default="")
+    descripcion = models.CharField(max_length=180, blank=True, default='')
     creado = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -235,10 +444,6 @@ class ImportacionPagoDetalle(models.Model):
     def __str__(self):
         return f"Importación #{self.importacion_id} - {self.tipo_registro} - fila {self.fila_excel or '-'}"
 
-
-# ==================================================
-# MOVIMIENTOS BANCARIOS (CARTOLAS) + CONCILIACIÓN
-# ==================================================
 
 class MovimientoBancario(models.Model):
     """
@@ -254,16 +459,16 @@ class MovimientoBancario(models.Model):
         ('desconocido', 'Desconocido'),
     )
 
-    cuenta = models.CharField(max_length=80, blank=True, default="")
-    banco = models.CharField(max_length=80, blank=True, default="")
+    cuenta = models.CharField(max_length=80, blank=True, default='')
+    banco = models.CharField(max_length=80, blank=True, default='')
     fecha = models.DateField()
     descripcion = models.CharField(max_length=255)
-    referencia = models.CharField(max_length=120, blank=True, default="")
+    referencia = models.CharField(max_length=120, blank=True, default='')
 
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='desconocido')
     monto = models.DecimalField(max_digits=14, decimal_places=2)
 
-    moneda = models.CharField(max_length=10, default="CLP")
+    moneda = models.CharField(max_length=10, default='CLP')
     hash_unico = models.CharField(max_length=64, unique=True)
 
     raw = models.JSONField(default=dict, blank=True)
@@ -274,10 +479,10 @@ class MovimientoBancario(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="movimientos_conciliados"
+        related_name='movimientos_conciliados'
     )
     conciliado_en = models.DateTimeField(null=True, blank=True)
-    nota_conciliacion = models.CharField(max_length=255, blank=True, default="")
+    nota_conciliacion = models.CharField(max_length=255, blank=True, default='')
 
     creado = models.DateTimeField(auto_now_add=True)
 
@@ -294,20 +499,20 @@ class MovimientoBancario(models.Model):
         return f"{self.fecha} {self.descripcion} {self.monto}"
 
     @staticmethod
-    def build_hash(fecha, monto, descripcion, referencia="", cuenta=""):
+    def build_hash(fecha, monto, descripcion, referencia='', cuenta=''):
         base = f"{fecha}|{monto}|{(descripcion or '').strip().lower()}|{(referencia or '').strip().lower()}|{(cuenta or '').strip().lower()}"
-        return hashlib.sha256(base.encode("utf-8")).hexdigest()
+        return hashlib.sha256(base.encode('utf-8')).hexdigest()
 
-    def marcar_conciliado(self, pago_real: PagoReal, nota: str = ""):
+    def marcar_conciliado(self, pago_real: PagoReal, nota: str = ''):
         self.pago_real = pago_real
         self.conciliado = True
         self.conciliado_en = timezone.now()
-        self.nota_conciliacion = (nota or "").strip()[:255]
-        self.save(update_fields=["pago_real", "conciliado", "conciliado_en", "nota_conciliacion"])
+        self.nota_conciliacion = (nota or '').strip()[:255]
+        self.save(update_fields=['pago_real', 'conciliado', 'conciliado_en', 'nota_conciliacion'])
 
     def desconciliar(self):
         self.pago_real = None
         self.conciliado = False
         self.conciliado_en = None
-        self.nota_conciliacion = ""
-        self.save(update_fields=["pago_real", "conciliado", "conciliado_en", "nota_conciliacion"])
+        self.nota_conciliacion = ''
+        self.save(update_fields=['pago_real', 'conciliado', 'conciliado_en', 'nota_conciliacion'])

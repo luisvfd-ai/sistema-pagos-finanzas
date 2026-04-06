@@ -1,19 +1,29 @@
 {% extends "base.html" %}
 {% load money_filters %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pagos/css/forms.css' %}?v=pagoslista17">
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="pagos-lista-page container-fluid mt-4">
 
-    <!-- Encabezado -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
+    <div class="pagos-header mb-4">
+        <div class="pagos-header__text">
             <h2 class="mb-1">📋 Cuentas por pagar</h2>
-            <p class="text-muted mb-0">Seguimiento operativo de compromisos financieros y control de pagos</p>
+            <p class="text-muted mb-0">
+                Seguimiento operativo de compromisos financieros y control de pagos
+            </p>
         </div>
-        <div class="d-flex gap-2">
+
+        <div class="pagos-header__actions">
+            {% if user.is_superuser or perms.pagos.add_pagoprogramado %}
             <a href="{% url 'pagos_crear' %}" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus me-1"></i> Nueva deuda
             </a>
+            {% endif %}
+
             {% if user.is_superuser or perms.pagos.add_pagoreal %}
             <a href="{% url 'pagos_real_crear' %}" class="btn btn-outline-success btn-sm">
                 <i class="fas fa-wallet me-1"></i> Registrar pago
@@ -22,10 +32,9 @@
         </div>
     </div>
 
-    <!-- Resumen -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border-danger shadow-sm h-100">
+    <div class="row g-3 mb-4 pagos-summary">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-danger shadow-sm h-100 resumen-card resumen-card-danger">
                 <div class="card-body">
                     <div class="text-muted small">Pendientes</div>
                     <div class="fs-2 fw-bold text-danger">{{ resumen_operativo.pendientes }}</div>
@@ -34,8 +43,8 @@
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card border-warning shadow-sm h-100">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-warning shadow-sm h-100 resumen-card resumen-card-warning">
                 <div class="card-body">
                     <div class="text-muted small">Parciales</div>
                     <div class="fs-2 fw-bold text-warning">{{ resumen_operativo.parciales }}</div>
@@ -44,8 +53,8 @@
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card border-success shadow-sm h-100">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-success shadow-sm h-100 resumen-card resumen-card-success">
                 <div class="card-body">
                     <div class="text-muted small">Pagados</div>
                     <div class="fs-2 fw-bold text-success">{{ resumen_operativo.pagados|default:0 }}</div>
@@ -54,8 +63,8 @@
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card border-secondary shadow-sm h-100">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-secondary shadow-sm h-100 resumen-card resumen-card-neutral">
                 <div class="card-body">
                     <div class="text-muted small">Mostrados en pantalla</div>
                     <div class="fs-2 fw-bold text-dark">{{ resumen_operativo.total }}</div>
@@ -71,17 +80,74 @@
         </div>
     </div>
 
-    <!-- Filtros -->
-    <div class="card shadow-sm mb-4">
+    <div class="row g-3 mb-4 pagos-summary pagos-summary-monetario">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card shadow-sm h-100 resumen-card resumen-card-money resumen-card-money-primary">
+                <div class="card-body">
+                    <div class="text-muted small">Total adeudado real</div>
+                    <div class="fs-4 fw-bold text-dark">{{ resumen_monetario.total_adeudado_real|clp }}</div>
+                    <div class="small text-muted">Suma del saldo deuda visible</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card shadow-sm h-100 resumen-card resumen-card-money resumen-card-money-danger">
+                <div class="card-body">
+                    <div class="text-muted small">Cuota operativa pendiente</div>
+                    <div class="fs-4 fw-bold text-danger">{{ resumen_monetario.total_cuota_pendiente|clp }}</div>
+                    <div class="small text-muted">Suma de saldo cuota filtrado</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card shadow-sm h-100 resumen-card resumen-card-money resumen-card-money-success">
+                <div class="card-body">
+                    <div class="text-muted small">Abonado visible</div>
+                    <div class="fs-4 fw-bold text-success">{{ resumen_monetario.total_abonado_visible|clp }}</div>
+                    <div class="small text-muted">Abonos de la vista filtrada</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card shadow-sm h-100 resumen-card resumen-card-money resumen-card-money-warning">
+                <div class="card-body">
+                    <div class="text-muted small">Vencido visible</div>
+                    <div class="fs-4 fw-bold text-warning">{{ resumen_monetario.total_vencido_visible|clp }}</div>
+                    <div class="small text-muted">Solo cuotas vencidas pendientes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4 filtros-card">
         <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-4">
+            <form method="get" class="row g-3 align-items-end filtros-form">
+                <div class="col-12 col-md-6 col-xl-3">
                     <label class="form-label mb-1">Buscar compromiso</label>
-                    <input type="text" name="q" value="{{ filtros.q }}" class="form-control"
-                           placeholder="Ej: arriendo, banco estado, iva...">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ filtros.q }}"
+                        class="form-control"
+                        placeholder="Ej: arriendo, banco estado, iva...">
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                    <label class="form-label mb-1">Unidad / lugar</label>
+                    <select name="unidad_negocio" class="form-select">
+                        <option value="">Todos</option>
+                        {% for u in unidades_negocio_disponibles %}
+                            <option value="{{ u.value }}" {% if filtros.unidad_negocio == u.value %}selected{% endif %}>
+                                {{ u.label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
                     <label class="form-label mb-1">Tipo</label>
                     <select name="tipo" class="form-select">
                         <option value="">Todos</option>
@@ -93,7 +159,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
                     <label class="form-label mb-1">Estado</label>
                     <select name="estado" class="form-select">
                         <option value="">Todos</option>
@@ -103,7 +169,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-12 col-sm-6 col-lg-4 col-xl-1">
                     <label class="form-label mb-1">Activo</label>
                     <select name="activo" class="form-select">
                         <option value="">Todos</option>
@@ -112,76 +178,142 @@
                     </select>
                 </div>
 
-                <div class="col-md-2 d-flex align-items-center">
-                    <div class="form-check mt-4">
-                        <input class="form-check-input" type="checkbox" name="ver_pagados" value="1" id="ver_pagados"
-                               {% if filtros.ver_pagados %}checked{% endif %}>
+                <div class="col-12 col-xl-2 d-flex align-items-xl-end">
+                    <div class="form-check filtros-check">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            name="ver_pagados"
+                            value="1"
+                            id="ver_pagados"
+                            {% if filtros.ver_pagados %}checked{% endif %}>
                         <label class="form-check-label" for="ver_pagados">
                             Ver pagados
                         </label>
                     </div>
                 </div>
 
-                <div class="col-12 d-flex gap-2">
+                <div class="col-12 filtros-actions">
                     <button class="btn btn-dark btn-sm">
                         <i class="fas fa-search me-1"></i> Filtrar
                     </button>
+
                     <a href="{% url 'pagos_lista' %}" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-eraser me-1"></i> Limpiar filtros
                     </a>
                 </div>
             </form>
+
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mt-3 pt-3 border-top">
+                <div class="small text-muted">
+                    Exportar exactamente la vista filtrada actual
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'pagos_lista' %}?{% if export_querystring %}{{ export_querystring }}&{% endif %}export=xlsx"
+                       class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-file-excel me-1"></i> Excel
+                    </a>
+
+                    <a href="{% url 'pagos_lista' %}?{% if export_querystring %}{{ export_querystring }}&{% endif %}export=csv"
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-file-csv me-1"></i> CSV
+                    </a>
+
+                    <a href="{% url 'pagos_lista' %}?{% if export_querystring %}{{ export_querystring }}&{% endif %}export=pdf"
+                       class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-file-pdf me-1"></i> PDF
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Tabla -->
-    <div class="card shadow-sm">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+    <div class="card shadow-sm pagos-table-desktop">
+        <div class="pagos-table-wrap">
+            <table class="table table-hover align-middle mb-0 pagos-table">
                 <thead class="table-light">
                     <tr>
-                        <th>Fecha inicio</th>
-                        <th>Concepto</th>
-                        <th>Tipo</th>
-                        <th>Cuotas</th>
-                        <th>Total</th>
-                        <th>Pagado</th>
-                        <th>Saldo</th>
-                        <th>Estado</th>
-                        <th>Progreso</th>
-                        <th>Activo</th>
-                        <th class="text-end">Acciones</th>
+                        <th style="min-width: 96px;">Fecha inicio</th>
+                        <th style="min-width: 220px;">Concepto</th>
+                        <th style="min-width: 110px;">Unidad</th>
+                        <th style="min-width: 126px;">Cuota actual</th>
+                        <th style="min-width: 112px;">Abonado cuota</th>
+                        <th style="min-width: 118px;">Saldo cuota</th>
+                        <th style="min-width: 102px;">Fecha cuota</th>
+                        <th style="min-width: 108px;">Estado cuota</th>
+                        <th style="min-width: 126px;">Saldo deuda</th>
+                        <th style="min-width: 96px;">Progreso</th>
+                        <th class="pagos-col-actions">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in pagos %}
                     <tr>
                         <td>{{ p.fecha_inicio|date:"d-m-Y" }}</td>
-                        <td class="fw-semibold">{{ p.nombre }}</td>
-                        <td>{{ p.tipo }}</td>
-                        <td>{{ p.cuotas }}</td>
-                        <td>{{ p.total|clp }}</td>
-                        <td class="text-success">{{ p.pagado|clp }}</td>
-
-                        <td class="
-                            {% if p.estado == 'PAGADO' %}text-success
-                            {% elif p.estado == 'PARCIAL' %}text-warning
-                            {% else %}text-danger{% endif %}
-                            fw-bold">
-                            {{ p.saldo|clp }}
-                        </td>
 
                         <td>
-                            {% if p.estado == "PAGADO" %}
-                                <span class="badge bg-success">Pagado</span>
-                            {% elif p.estado == "PARCIAL" %}
-                                <span class="badge bg-warning text-dark">Parcial</span>
-                            {% else %}
-                                <span class="badge bg-danger">Pendiente</span>
+                            <div class="fw-semibold">{{ p.nombre }}</div>
+                            {% if p.cuota_actual_label %}
+                                <div class="small text-muted">
+                                    Cuota operativa {{ p.cuota_actual_label }}
+                                </div>
                             {% endif %}
                         </td>
 
-                        <td style="min-width: 140px;">
+                        <td>
+                            {% if p.unidad_negocio_label %}
+                                {{ p.unidad_negocio_label }}
+                            {% elif p.unidad_negocio %}
+                                {{ p.unidad_negocio }}
+                            {% else %}
+                                <span class="text-muted">Sin asignar</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <div class="fw-bold">{{ p.cuota_actual|clp }}</div>
+                            {% if p.cuota_actual_label %}
+                                <div class="small text-muted">{{ p.cuota_actual_label }}</div>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-success">
+                            {{ p.abonado_cuota|clp }}
+                        </td>
+
+                        <td class="
+                            {% if p.estado_cuota_clase == 'success' %}text-success
+                            {% elif p.estado_cuota_clase == 'warning' %}text-warning
+                            {% else %}text-danger{% endif %}
+                            fw-bold">
+                            {{ p.saldo_cuota|clp }}
+                        </td>
+
+                        <td>
+                            {% if p.fecha_cuota_actual %}
+                                {{ p.fecha_cuota_actual|date:"d-m-Y" }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if p.estado_cuota_clase == "success" %}
+                                <span class="badge bg-success">{{ p.estado_cuota }}</span>
+                            {% elif p.estado_cuota_clase == "warning" %}
+                                <span class="badge bg-warning text-dark">{{ p.estado_cuota }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ p.estado_cuota }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <div class="fw-semibold">{{ p.saldo_deuda|clp }}</div>
+                            <div class="small text-muted">Saldo total pendiente</div>
+                        </td>
+
+                        <td>
                             <div class="progress">
                                 <div class="progress-bar
                                     {% if p.estado == 'PAGADO' %}bg-success
@@ -195,37 +327,33 @@
                             </div>
                         </td>
 
-                        <td>
-                            {% if p.activo %}
-                                <span class="badge bg-primary">Sí</span>
-                            {% else %}
-                                <span class="badge bg-secondary">No</span>
-                            {% endif %}
-                        </td>
-
-                        <td class="text-end" style="white-space: nowrap;">
-                             <div class="d-inline-flex gap-1">
-
+                        <td class="pagos-actions-cell">
+                            <div class="pagos-table-actions pagos-table-actions--stack">
+                                {% if user.is_superuser or perms.pagos.change_pagoprogramado %}
                                 <a href="{% url 'pagos_editar' p.id %}"
-                                    class="btn btn-sm btn-outline-warning"
-                                    title="Editar compromiso">
+                                   class="btn btn-sm btn-outline-warning"
+                                   title="Editar compromiso">
                                     <i class="fas fa-pen me-1"></i> Editar
                                 </a>
+                                {% endif %}
 
-                        {% if user.is_superuser or perms.pagos.add_pagoreal %}
-                        {% if p.estado != 'PAGADO' %}
-                                <a href="{% url 'pagos_real_crear' %}?pago_id={{ p.id }}&next=pagos_lista"
-                                    class="btn btn-sm btn-outline-success"
-                                    title="Registrar abono">
-                                    <i class="fas fa-plus-circle me-1"></i> Abono
-                                </a>
-                        {% else %}
-                            <button class="btn btn-sm btn-outline-secondary" disabled>
-                                <i class="fas fa-check-circle"></i>
-                            </button>
-                        {% endif %}
-                        {% endif %}
+                                {% if user.is_superuser or perms.pagos.add_pagoreal %}
+                                    {% if p.estado != 'PAGADO' %}
+                                    <a href="{% url 'pagos_real_crear' %}?pago_id={{ p.id }}&next=pagos_lista"
+                                       class="btn btn-sm btn-outline-success"
+                                       title="Registrar abono">
+                                        <i class="fas fa-plus-circle me-1"></i> Abono
+                                    </a>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-check-circle me-1"></i> Pagado
+                                    </button>
+                                    {% endif %}
+                                {% endif %}
 
+                                {% if not user.is_superuser and not perms.pagos.change_pagoprogramado and not perms.pagos.add_pagoreal %}
+                                <div class="pagos-actions-empty">Sin acciones</div>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -239,6 +367,136 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="pagos-cards-mobile">
+        {% for p in pagos %}
+        <div class="pago-mobile-card">
+            <div class="pago-mobile-card__top">
+                <div class="pago-mobile-card__title-wrap">
+                    <h3 class="pago-mobile-card__title">{{ p.nombre }}</h3>
+                    <div class="pago-mobile-card__meta">
+                        Inicio: {{ p.fecha_inicio|date:"d-m-Y" }}
+                    </div>
+                    {% if p.cuota_actual_label %}
+                    <div class="pago-mobile-card__meta">
+                        Cuota operativa: {{ p.cuota_actual_label }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    {% if p.estado_cuota_clase == "success" %}
+                        <span class="badge bg-success">{{ p.estado_cuota }}</span>
+                    {% elif p.estado_cuota_clase == "warning" %}
+                        <span class="badge bg-warning text-dark">{{ p.estado_cuota }}</span>
+                    {% else %}
+                        <span class="badge bg-danger">{{ p.estado_cuota }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pago-mobile-card__amount">
+                {{ p.cuota_actual|clp }}
+            </div>
+            <div class="pago-mobile-card__amount-label">Cuota operativa actual</div>
+
+            <div class="pago-mobile-card__grid">
+                <div class="pago-mobile-card__item">
+                    <span class="label">Fecha cuota</span>
+                    <span class="value">
+                        {% if p.fecha_cuota_actual %}
+                            {{ p.fecha_cuota_actual|date:"d-m-Y" }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="pago-mobile-card__item">
+                    <span class="label">Unidad</span>
+                    <span class="value">
+                        {% if p.unidad_negocio_label %}
+                            {{ p.unidad_negocio_label }}
+                        {% elif p.unidad_negocio %}
+                            {{ p.unidad_negocio }}
+                        {% else %}
+                            <span class="text-muted">Sin asignar</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="pago-mobile-card__item">
+                    <span class="label">Abonado cuota</span>
+                    <span class="value value-success">{{ p.abonado_cuota|clp }}</span>
+                </div>
+
+                <div class="pago-mobile-card__item">
+                    <span class="label">Saldo cuota</span>
+                    <span class="value
+                        {% if p.estado_cuota_clase == 'success' %}value-success
+                        {% elif p.estado_cuota_clase == 'warning' %}value-warning
+                        {% else %}value-danger{% endif %}">
+                        {{ p.saldo_cuota|clp }}
+                    </span>
+                </div>
+
+                <div class="pago-mobile-card__item">
+                    <span class="label">Saldo deuda</span>
+                    <span class="value">{{ p.saldo_deuda|clp }}</span>
+                </div>
+
+                <div class="pago-mobile-card__item">
+                    <span class="label">Progreso</span>
+                    <span class="value">{{ p.porcentaje }}%</span>
+                </div>
+            </div>
+
+            <div class="pago-mobile-card__progress">
+                <div class="progress">
+                    <div class="progress-bar
+                        {% if p.estado == 'PAGADO' %}bg-success
+                        {% elif p.estado == 'PARCIAL' %}bg-warning text-dark
+                        {% else %}bg-danger{% endif %}"
+                        style="width: {{ p.porcentaje }}%;">
+                        {% if p.porcentaje > 0 %}
+                            {{ p.porcentaje }}%
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="pago-mobile-card__actions">
+                {% if user.is_superuser or perms.pagos.change_pagoprogramado %}
+                <a href="{% url 'pagos_editar' p.id %}"
+                   class="btn btn-outline-warning btn-sm">
+                    <i class="fas fa-pen me-1"></i> Editar
+                </a>
+                {% endif %}
+
+                {% if user.is_superuser or perms.pagos.add_pagoreal %}
+                    {% if p.estado != 'PAGADO' %}
+                    <a href="{% url 'pagos_real_crear' %}?pago_id={{ p.id }}&next=pagos_lista"
+                       class="btn btn-success btn-sm">
+                        <i class="fas fa-plus-circle me-1"></i> Registrar abono
+                    </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                        <i class="fas fa-check-circle me-1"></i> Pagado
+                    </button>
+                    {% endif %}
+                {% endif %}
+
+                {% if not user.is_superuser and not perms.pagos.change_pagoprogramado and not perms.pagos.add_pagoreal %}
+                <div class="mobile-empty-state">Sin acciones disponibles</div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="mobile-empty-state">
+            No se encontraron compromisos con los filtros aplicados.
+        </div>
+        {% endfor %}
     </div>
 
 </div>
