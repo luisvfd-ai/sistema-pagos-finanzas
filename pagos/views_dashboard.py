@@ -2545,97 +2545,94 @@ def reportes_financieros(request):
     proyeccion_data = None
     proyeccion_tabla = []
 
-    if request.method == 'POST':
-        diarios = (
-            pagos_qs
-            .values('fecha_pago')
-            .annotate(
-                total_dia=Coalesce(
-                    Sum('monto'),
-                    Value(Decimal('0.00')),
-                    output_field=DecimalField(max_digits=14, decimal_places=2)
-                )
+    # ==============================
+    # GENERAR DATOS SIEMPRE (GET/POST)
+    # ==============================
+    diarios = (
+        pagos_qs
+        .values('fecha_pago')
+        .annotate(
+            total_dia=Coalesce(
+                Sum('monto'),
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=14, decimal_places=2)
             )
-            .order_by('fecha_pago')
         )
+        .order_by('fecha_pago')
+    )
 
-        chart_diario_json = json.dumps({
-            "labels": [d['fecha_pago'].strftime('%Y-%m-%d') for d in diarios if d.get('fecha_pago')],
-            "valores": [float(d['total_dia']) for d in diarios if d.get('fecha_pago')],
-        })
+    chart_diario_json = json.dumps({
+        "labels": [d['fecha_pago'].strftime('%Y-%m-%d') for d in diarios if d.get('fecha_pago')],
+        "valores": [float(d['total_dia']) for d in diarios if d.get('fecha_pago')],
+    })
 
-        por_metodo = list(
-            pagos_qs
-            .values('metodo_pago')
-            .annotate(
-                total_metodo=Coalesce(
-                    Sum('monto'),
-                    Value(Decimal('0.00')),
-                    output_field=DecimalField(max_digits=14, decimal_places=2)
-                )
+    por_metodo = list(
+        pagos_qs
+        .values('metodo_pago')
+        .annotate(
+            total_metodo=Coalesce(
+                Sum('monto'),
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=14, decimal_places=2)
             )
-            .order_by('-total_metodo')
         )
+        .order_by('-total_metodo')
+    )
 
-        chart_metodo_json = json.dumps({
-            "labels": [(m.get('metodo_pago') or "—") for m in por_metodo],
-            "valores": [float(m['total_metodo']) for m in por_metodo],
-        })
+    chart_metodo_json = json.dumps({
+        "labels": [(m.get('metodo_pago') or "—") for m in por_metodo],
+        "valores": [float(m['total_metodo']) for m in por_metodo],
+    })
 
-        if por_metodo:
-            metodo_principal = (por_metodo[0].get('metodo_pago') or "—")
+    if por_metodo:
+        metodo_principal = (por_metodo[0].get('metodo_pago') or "—")
 
-        top = (
-            pagos_qs
-            .values('pago__nombre', 'pago__unidad_negocio')
-            .annotate(
-                total_comp=Coalesce(
-                    Sum('monto'),
-                    Value(Decimal('0.00')),
-                    output_field=DecimalField(max_digits=14, decimal_places=2)
-                ),
-                cantidad=Count('id')
-            )
-            .order_by('-total_comp')[:3]
+    top = (
+        pagos_qs
+        .values('pago__nombre', 'pago__unidad_negocio')
+        .annotate(
+            total_comp=Coalesce(
+                Sum('monto'),
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=14, decimal_places=2)
+            ),
+            cantidad=Count('id')
         )
+        .order_by('-total_comp')[:3]
+    )
 
-        top_compromisos = [{
-            "nombre": t['pago__nombre'],
-            "unidad_negocio": t.get('pago__unidad_negocio') or 'otros',
-            "unidad_negocio_label": unidad_negocio_label_from_codigo(t.get('pago__unidad_negocio') or 'otros'),
-            "total": t['total_comp'],
-            "cantidad": t['cantidad'],
-        } for t in top]
+    top_compromisos = [{
+        "nombre": t['pago__nombre'],
+        "unidad_negocio": t.get('pago__unidad_negocio') or 'otros',
+        "unidad_negocio_label": unidad_negocio_label_from_codigo(t.get('pago__unidad_negocio') or 'otros'),
+        "total": t['total_comp'],
+        "cantidad": t['cantidad'],
+    } for t in top]
 
-        resumen_unidades_periodo = _resumen_pagos_por_unidad(pagos_qs)
+    resumen_unidades_periodo = _resumen_pagos_por_unidad(pagos_qs)
 
-        # -----------------------------
-        # PROYECCIÓN FUTURA
-        # -----------------------------
-        proyeccion_json = generar_proyeccion_json(
-            hasta,
-            unidad_negocio=filtro_unidad_negocio or None
-        )
+    # -----------------------------
+    # PROYECCIÓN FUTURA
+    # -----------------------------
+    proyeccion_json = generar_proyeccion_json(
+        hasta,
+        unidad_negocio=filtro_unidad_negocio or None
+    )
 
-        proyeccion_data = resumen_proyeccion(
-            hasta,
-            unidad_negocio=filtro_unidad_negocio or None
-        )
+    proyeccion_data = resumen_proyeccion(
+        hasta,
+        unidad_negocio=filtro_unidad_negocio or None
+    )
 
-        proyeccion_tabla = obtener_proyeccion_hasta_fecha(
-            hasta,
-            unidad_negocio=filtro_unidad_negocio or None
-        )
+    proyeccion_tabla = obtener_proyeccion_hasta_fecha(
+        hasta,
+        unidad_negocio=filtro_unidad_negocio or None
+    )
 
-        form = ReportesFiltroForm(initial={
-            "fecha_desde": desde,
-            "fecha_hasta": hasta
-        })
-    else:
-        form = ReportesFiltroForm(initial={
-            "fecha_desde": desde,
-            "fecha_hasta": hasta
-        })
+    form = ReportesFiltroForm(initial={
+        "fecha_desde": desde,
+        "fecha_hasta": hasta
+    })
 
     return _render_view(request, 'pagos/reportes.html', {
         'pagos': pagos_qs,
@@ -2658,7 +2655,6 @@ def reportes_financieros(request):
         'proyeccion_data': proyeccion_data,
         'proyeccion_tabla': proyeccion_tabla,
     })
-
 
 # ==================================================
 # CARTOLAS - PARSEO (CSV/XLSX) + DEDUPE
