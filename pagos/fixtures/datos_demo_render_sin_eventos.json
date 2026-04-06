@@ -1,0 +1,2236 @@
+[
+{
+  "model": "pagos.empresaconfig",
+  "pk": 1,
+  "fields": {
+    "config_key": 1,
+    "nombre_empresa": "Comercializadora Uribe Spa",
+    "razon_social": "Comercializadora Uribe Spa",
+    "rut": "76.367.491-6",
+    "giro": "FERRETERIA, VENTA DE ARTICULOS, COMIDA Y ALIMENTOS, SALON DE ENTRETENIMIENTO",
+    "email": "gerencia@elrincondelosnietos.cl",
+    "telefono": "+56934670175",
+    "direccion": "Marcelo Fourcade 4964",
+    "ciudad": "puerto montt",
+    "logo": "empresa/logos/danza_del_fuego.jpg",
+    "creado": "2026-04-04T06:47:06.273Z",
+    "actualizado": "2026-04-04T07:18:07.036Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 1,
+  "fields": {
+    "nombre": "Alerce",
+    "codigo": "alerce",
+    "descripcion": "",
+    "activa": true,
+    "orden": 3,
+    "legacy_key": "alerce",
+    "creado": "2026-03-30T18:34:54.349Z",
+    "actualizado": "2026-03-30T18:34:54.349Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 2,
+  "fields": {
+    "nombre": "Carolina",
+    "codigo": "carolina",
+    "descripcion": "",
+    "activa": true,
+    "orden": 10,
+    "legacy_key": "carolina",
+    "creado": "2026-03-30T18:34:54.350Z",
+    "actualizado": "2026-03-30T18:34:54.350Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 3,
+  "fields": {
+    "nombre": "Cauquenes",
+    "codigo": "cauquenes",
+    "descripcion": "",
+    "activa": true,
+    "orden": 2,
+    "legacy_key": "cauquenes",
+    "creado": "2026-03-30T18:34:54.351Z",
+    "actualizado": "2026-03-30T18:34:54.351Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 4,
+  "fields": {
+    "nombre": "Costanera Ampliación",
+    "codigo": "costanera_ampliacion",
+    "descripcion": "",
+    "activa": true,
+    "orden": 8,
+    "legacy_key": "costanera_ampliacion",
+    "creado": "2026-03-30T18:34:54.351Z",
+    "actualizado": "2026-03-30T18:34:54.351Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 5,
+  "fields": {
+    "nombre": "Espacio Costanera",
+    "codigo": "espacio_costanera",
+    "descripcion": "",
+    "activa": true,
+    "orden": 7,
+    "legacy_key": "espacio_costanera",
+    "creado": "2026-03-30T18:34:54.352Z",
+    "actualizado": "2026-03-30T18:34:54.352Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 6,
+  "fields": {
+    "nombre": "Imposiciones",
+    "codigo": "imposiciones",
+    "descripcion": "",
+    "activa": true,
+    "orden": 12,
+    "legacy_key": "imposiciones",
+    "creado": "2026-03-30T18:34:54.352Z",
+    "actualizado": "2026-03-30T18:34:54.352Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 7,
+  "fields": {
+    "nombre": "IVA",
+    "codigo": "iva",
+    "descripcion": "",
+    "activa": true,
+    "orden": 13,
+    "legacy_key": "iva",
+    "creado": "2026-03-30T18:34:54.353Z",
+    "actualizado": "2026-03-30T18:34:54.353Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 8,
+  "fields": {
+    "nombre": "Mall Castro",
+    "codigo": "mall_castro",
+    "descripcion": "",
+    "activa": true,
+    "orden": 9,
+    "legacy_key": "mall_castro",
+    "creado": "2026-03-30T18:34:54.353Z",
+    "actualizado": "2026-03-30T18:34:54.353Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 9,
+  "fields": {
+    "nombre": "Oficina",
+    "codigo": "oficina",
+    "descripcion": "",
+    "activa": true,
+    "orden": 11,
+    "legacy_key": "oficina",
+    "creado": "2026-03-30T18:34:54.354Z",
+    "actualizado": "2026-03-30T18:34:54.354Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 10,
+  "fields": {
+    "nombre": "Otros",
+    "codigo": "otros",
+    "descripcion": "",
+    "activa": true,
+    "orden": 16,
+    "legacy_key": "otros",
+    "creado": "2026-03-30T18:34:54.354Z",
+    "actualizado": "2026-03-30T18:34:54.354Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 11,
+  "fields": {
+    "nombre": "Pasmar",
+    "codigo": "pasmar",
+    "descripcion": "",
+    "activa": true,
+    "orden": 5,
+    "legacy_key": "pasmar",
+    "creado": "2026-03-30T18:34:54.355Z",
+    "actualizado": "2026-03-30T20:15:54.238Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 12,
+  "fields": {
+    "nombre": "Pitrufquén",
+    "codigo": "pitrufquen",
+    "descripcion": "",
+    "activa": true,
+    "orden": 4,
+    "legacy_key": "pitrufquen",
+    "creado": "2026-03-30T18:34:54.355Z",
+    "actualizado": "2026-03-30T18:34:54.355Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 13,
+  "fields": {
+    "nombre": "Terminal",
+    "codigo": "terminal",
+    "descripcion": "",
+    "activa": true,
+    "orden": 1,
+    "legacy_key": "terminal",
+    "creado": "2026-03-30T18:34:54.356Z",
+    "actualizado": "2026-03-30T18:34:54.356Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 14,
+  "fields": {
+    "nombre": "Tottus",
+    "codigo": "tottus",
+    "descripcion": "",
+    "activa": true,
+    "orden": 15,
+    "legacy_key": "tottus",
+    "creado": "2026-03-30T18:34:54.356Z",
+    "actualizado": "2026-03-30T18:34:54.356Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 15,
+  "fields": {
+    "nombre": "Valdivia",
+    "codigo": "valdivia",
+    "descripcion": "",
+    "activa": true,
+    "orden": 6,
+    "legacy_key": "valdivia",
+    "creado": "2026-03-30T18:34:54.357Z",
+    "actualizado": "2026-03-30T18:34:54.357Z"
+  }
+},
+{
+  "model": "pagos.unidadnegocio",
+  "pk": 16,
+  "fields": {
+    "nombre": "Vivian",
+    "codigo": "vivian",
+    "descripcion": "",
+    "activa": true,
+    "orden": 14,
+    "legacy_key": "vivian",
+    "creado": "2026-03-30T18:34:54.357Z",
+    "actualizado": "2026-03-30T18:34:54.357Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 116,
+  "fields": {
+    "nombre": "iva",
+    "tipo": "unico",
+    "monto": "2873263",
+    "fecha_inicio": "2026-01-20",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D1\nTipo Excel: atrasado con intereses\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 2873263",
+    "unidad_negocio_ref": 7,
+    "unidad_negocio": "iva",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.285Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 117,
+  "fields": {
+    "nombre": "iva carolina",
+    "tipo": "unico",
+    "monto": "282242",
+    "fecha_inicio": "2026-03-20",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D2\nTipo Excel: postergado\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 282242",
+    "unidad_negocio_ref": 7,
+    "unidad_negocio": "iva",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.300Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 118,
+  "fields": {
+    "nombre": "SAESA CAUQUENES CORTE 9/03",
+    "tipo": "unico",
+    "monto": "639200",
+    "fecha_inicio": "2026-03-09",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D3\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 294600",
+    "unidad_negocio_ref": 3,
+    "unidad_negocio": "cauquenes",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.316Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 119,
+  "fields": {
+    "nombre": "arriendo cauquenes febrero",
+    "tipo": "fijo",
+    "monto": "1290031",
+    "fecha_inicio": "2026-03-19",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D4\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 590031",
+    "unidad_negocio_ref": 3,
+    "unidad_negocio": "cauquenes",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.344Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 120,
+  "fields": {
+    "nombre": "arriendo terminal febrero",
+    "tipo": "fijo",
+    "monto": "944944",
+    "fecha_inicio": "2026-02-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D5\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 594944",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.370Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 121,
+  "fields": {
+    "nombre": "arriendo terminal febrero espacio",
+    "tipo": "fijo",
+    "monto": "944944",
+    "fecha_inicio": "2026-02-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D6\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 944944",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.396Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 122,
+  "fields": {
+    "nombre": "contribucion terminal",
+    "tipo": "unico",
+    "monto": "17064",
+    "fecha_inicio": "2026-02-05",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D7\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 17064",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.409Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 123,
+  "fields": {
+    "nombre": "contribuciones carolina",
+    "tipo": "unico",
+    "monto": "81198",
+    "fecha_inicio": "2026-01-01",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\r\nID origen: D8\r\nTipo de pago Excel: UNICO\r\nSaldo Excel al importar: 81198",
+    "unidad_negocio_ref": 2,
+    "unidad_negocio": "carolina",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.423Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 124,
+  "fields": {
+    "nombre": "contribuciones carolina",
+    "tipo": "unico",
+    "monto": "81198",
+    "fecha_inicio": "2026-02-01",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D9\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 81198",
+    "unidad_negocio_ref": 2,
+    "unidad_negocio": "carolina",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.436Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 125,
+  "fields": {
+    "nombre": "CUOTA PRESTAMO BANCO CHILE CAROLINA",
+    "tipo": "fijo",
+    "monto": "1178513",
+    "fecha_inicio": "2026-02-25",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D10\nTipo Excel: atrasado con intereses\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 1178513",
+    "unidad_negocio_ref": 2,
+    "unidad_negocio": "carolina",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.450Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 126,
+  "fields": {
+    "nombre": "PASMAR",
+    "tipo": "unico",
+    "monto": "30562111",
+    "fecha_inicio": "2026-02-12",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D11\nTipo Excel: abono\nTipo de pago Excel: UNICA\nSaldo Excel al importar: 15286311",
+    "unidad_negocio_ref": 11,
+    "unidad_negocio": "pasmar",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.464Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 127,
+  "fields": {
+    "nombre": "impuesto a la renta para convenio",
+    "tipo": "unico",
+    "monto": "3000000",
+    "fecha_inicio": "2026-03-01",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nSaldo Excel al importar: 3000000",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.489Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 128,
+  "fields": {
+    "nombre": "prestamo vivian",
+    "tipo": "credito",
+    "monto": "186894",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 10,
+    "cuotas_restantes": 9,
+    "descripcion": "Importado desde Excel\r\nID origen: D13\r\nTipo Excel: prestamo\r\nTipo de pago Excel: MENSUAL\r\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.504Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 129,
+  "fields": {
+    "nombre": "cmr vivian",
+    "tipo": "credito",
+    "monto": "250000",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 10,
+    "cuotas_restantes": 9,
+    "descripcion": "Importado desde Excel\r\nID origen: D14\r\nTipo Excel: prestamo\r\nTipo de pago Excel: MENSUAL\r\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.533Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 130,
+  "fields": {
+    "nombre": "cencosud vivian",
+    "tipo": "credito",
+    "monto": "150000",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 10,
+    "cuotas_restantes": 9,
+    "descripcion": "Importado desde Excel\r\nID origen: D15\r\nTipo Excel: prestamo\r\nTipo de pago Excel: MENSUAL\r\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.562Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 131,
+  "fields": {
+    "nombre": "credito santander",
+    "tipo": "credito",
+    "monto": "1394316",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\r\nID origen: D16\r\nTipo de pago Excel: MENSUAL\r\nSaldo Excel al importar: 1394316",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.588Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 132,
+  "fields": {
+    "nombre": "credito de consumo",
+    "tipo": "credito",
+    "monto": "2108260",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D17\nTipo Excel: credito\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.601Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 133,
+  "fields": {
+    "nombre": "jose antonio",
+    "tipo": "credito",
+    "monto": "2709179",
+    "fecha_inicio": "2026-03-06",
+    "frecuencia": "mensual",
+    "total_cuotas": 6,
+    "cuotas_restantes": 3,
+    "descripcion": "Importado desde Excel\nID origen: D18\nTipo Excel: prestamo\nTipo de pago Excel: MENSUAL\nCuotas Excel: 3/6\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.629Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 134,
+  "fields": {
+    "nombre": "fac 26581 terminal",
+    "tipo": "fijo",
+    "monto": "947152",
+    "fecha_inicio": "2026-03-01",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D19\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 947152",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.664Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 135,
+  "fields": {
+    "nombre": "26582 terminal",
+    "tipo": "fijo",
+    "monto": "947153",
+    "fecha_inicio": "2026-03-01",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D20\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 947153",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.680Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 136,
+  "fields": {
+    "nombre": "21848 + 21849 terminal",
+    "tipo": "fijo",
+    "monto": "17064",
+    "fecha_inicio": "2026-03-01",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\r\nID origen: D21\r\nTipo de pago Excel: MENSUAL\r\nSaldo Excel al importar: 17064",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.693Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 137,
+  "fields": {
+    "nombre": "cauquenes arriendo 143665",
+    "tipo": "fijo",
+    "monto": "1294118",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D22\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 1294118",
+    "unidad_negocio_ref": 3,
+    "unidad_negocio": "cauquenes",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.706Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 138,
+  "fields": {
+    "nombre": "arriendo alerce",
+    "tipo": "fijo",
+    "monto": "1533291",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D23\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 1533291",
+    "unidad_negocio_ref": 1,
+    "unidad_negocio": "alerce",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.720Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 139,
+  "fields": {
+    "nombre": "arriendo valdivia rincon",
+    "tipo": "fijo",
+    "monto": "2426765",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D24\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 2426765",
+    "unidad_negocio_ref": 15,
+    "unidad_negocio": "valdivia",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.732Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 140,
+  "fields": {
+    "nombre": "espacio costanera",
+    "tipo": "fijo",
+    "monto": "2946795",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D25\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 2946795",
+    "unidad_negocio_ref": 5,
+    "unidad_negocio": "espacio_costanera",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.746Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 141,
+  "fields": {
+    "nombre": "paseo costanera ampliacion",
+    "tipo": "fijo",
+    "monto": "1341630",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D26\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 1341630",
+    "unidad_negocio_ref": 4,
+    "unidad_negocio": "costanera_ampliacion",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.759Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 142,
+  "fields": {
+    "nombre": "mall castro",
+    "tipo": "fijo",
+    "monto": "1006222",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D27\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 1006222",
+    "unidad_negocio_ref": 8,
+    "unidad_negocio": "mall_castro",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.773Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 143,
+  "fields": {
+    "nombre": "arriendo pitrufquen gastos comunes",
+    "tipo": "fijo",
+    "monto": "2131035",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D28\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 12,
+    "unidad_negocio": "pitrufquen",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.787Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 144,
+  "fields": {
+    "nombre": "442 gastos comunes local 22 b y c  pitrufquen",
+    "tipo": "fijo",
+    "monto": "524974",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\r\nID origen: D29\r\nTipo de pago Excel: MENSUAL\r\nSaldo Excel al importar: 524974",
+    "unidad_negocio_ref": 12,
+    "unidad_negocio": "pitrufquen",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.815Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 145,
+  "fields": {
+    "nombre": "464 arriendo porcentual 22a pitrufquen",
+    "tipo": "fijo",
+    "monto": "1641449",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\r\nID origen: D30\r\nTipo de pago Excel: MENSUAL\r\nSaldo Excel al importar: 1641449",
+    "unidad_negocio_ref": 12,
+    "unidad_negocio": "pitrufquen",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.829Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 146,
+  "fields": {
+    "nombre": "arriendo porcentual b y c pitrufquen",
+    "tipo": "fijo",
+    "monto": "462973",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\r\nID origen: D31\r\nTipo de pago Excel: MENSUAL\r\nSaldo Excel al importar: 462973",
+    "unidad_negocio_ref": 12,
+    "unidad_negocio": "pitrufquen",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.841Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 147,
+  "fields": {
+    "nombre": "consumo electrico 22a pitrufquen",
+    "tipo": "unico",
+    "monto": "1505446",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\r\nID origen: D32\r\nTipo de pago Excel: UNICO\r\nSaldo Excel al importar: 1505446",
+    "unidad_negocio_ref": 12,
+    "unidad_negocio": "pitrufquen",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.856Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 148,
+  "fields": {
+    "nombre": "consumo electrico 22 b y c pitrufquen",
+    "tipo": "unico",
+    "monto": "63144",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\r\nID origen: D33\r\nTipo de pago Excel: UNICO\r\nSaldo Excel al importar: 63144",
+    "unidad_negocio_ref": 12,
+    "unidad_negocio": "pitrufquen",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.868Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 149,
+  "fields": {
+    "nombre": "pago derecho de terreno",
+    "tipo": "fijo",
+    "monto": "200000",
+    "fecha_inicio": "2026-03-12",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D34\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.883Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 150,
+  "fields": {
+    "nombre": "imposiciones febrero",
+    "tipo": "unico",
+    "monto": "3728256",
+    "fecha_inicio": "2026-03-10",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D35\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 3324381",
+    "unidad_negocio_ref": 6,
+    "unidad_negocio": "imposiciones",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.909Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 151,
+  "fields": {
+    "nombre": "tottus fac11117253",
+    "tipo": "fijo",
+    "monto": "1729550",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D36\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 1729550",
+    "unidad_negocio_ref": 14,
+    "unidad_negocio": "tottus",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.931Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 152,
+  "fields": {
+    "nombre": "soap suzuki",
+    "tipo": "unico",
+    "monto": "6490",
+    "fecha_inicio": "2026-03-15",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D37\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.945Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 153,
+  "fields": {
+    "nombre": "soap hyundai santa fe",
+    "tipo": "unico",
+    "monto": "6490",
+    "fecha_inicio": "2026-03-15",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D38\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.970Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 154,
+  "fields": {
+    "nombre": "soap colorado",
+    "tipo": "unico",
+    "monto": "11390",
+    "fecha_inicio": "2026-03-15",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D39\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:13.998Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 155,
+  "fields": {
+    "nombre": "permiso de circulacion colorado",
+    "tipo": "unico",
+    "monto": "152256",
+    "fecha_inicio": "2026-03-15",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D40\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.026Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 156,
+  "fields": {
+    "nombre": "poliza camion hd35",
+    "tipo": "unico",
+    "monto": "11390",
+    "fecha_inicio": "2026-03-15",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D41\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.054Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 157,
+  "fields": {
+    "nombre": "permiso de circulacion camion hd35",
+    "tipo": "unico",
+    "monto": "142903",
+    "fecha_inicio": "2026-03-15",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D42\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.082Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 158,
+  "fields": {
+    "nombre": "arriendo concepcion",
+    "tipo": "fijo",
+    "monto": "258971",
+    "fecha_inicio": "2026-03-15",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D43\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.110Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 159,
+  "fields": {
+    "nombre": "mundo santiago",
+    "tipo": "fijo",
+    "monto": "14990",
+    "fecha_inicio": "2026-03-10",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D44\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.140Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 160,
+  "fields": {
+    "nombre": "mundo cauquenes",
+    "tipo": "fijo",
+    "monto": "15514",
+    "fecha_inicio": "2026-03-10",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D45\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 3,
+    "unidad_negocio": "cauquenes",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.171Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 161,
+  "fields": {
+    "nombre": "prestamo vivian borquez",
+    "tipo": "credito",
+    "monto": "1050000",
+    "fecha_inicio": "2026-03-09",
+    "frecuencia": "mensual",
+    "total_cuotas": 10,
+    "cuotas_restantes": 8,
+    "descripcion": "Importado desde Excel\r\nID origen: D46\r\nTipo Excel: prestamo\r\nTipo de pago Excel: MENSUAL\r\nCuotas Excel: 2/10\r\nSaldo Excel al importar: 0",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.198Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 162,
+  "fields": {
+    "nombre": "banco santander vivian",
+    "tipo": "credito",
+    "monto": "250000",
+    "fecha_inicio": "2026-03-10",
+    "frecuencia": "mensual",
+    "total_cuotas": 24,
+    "cuotas_restantes": 18,
+    "descripcion": "Importado desde Excel\nID origen: D47\nTipo Excel: prestamo\nTipo de pago Excel: MENSUAL\nCuotas Excel: 6/24\nSaldo Excel al importar: 250000",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.256Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 163,
+  "fields": {
+    "nombre": "hipotecario carolina",
+    "tipo": "credito",
+    "monto": "881000",
+    "fecha_inicio": "2026-03-10",
+    "frecuencia": "mensual",
+    "total_cuotas": 10,
+    "cuotas_restantes": 9,
+    "descripcion": "Importado desde Excel\r\nID origen: D48\r\nTipo de pago Excel: MENSUAL\r\nSaldo Excel al importar: 881000",
+    "unidad_negocio_ref": 2,
+    "unidad_negocio": "carolina",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.343Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 164,
+  "fields": {
+    "nombre": "pablo cespedes",
+    "tipo": "cheque",
+    "monto": "10000000",
+    "fecha_inicio": "2026-03-13",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D49\nTipo Excel: cheque 9233363\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 10000000",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.358Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 165,
+  "fields": {
+    "nombre": "prestamo vivian",
+    "tipo": "credito",
+    "monto": "980000",
+    "fecha_inicio": "2026-03-14",
+    "frecuencia": "mensual",
+    "total_cuotas": 2,
+    "cuotas_restantes": 2,
+    "descripcion": "Importado desde Excel\r\nID origen: D50\r\nTipo Excel: prestamo\r\nTipo de pago Excel: MENSUAL\r\nCuotas Excel: 5/6\r\nSaldo Excel al importar: 980000",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.373Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 166,
+  "fields": {
+    "nombre": "banco estado",
+    "tipo": "credito",
+    "monto": "1372000",
+    "fecha_inicio": "2026-03-15",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D51\nTipo Excel: credito\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 1372000",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.387Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 167,
+  "fields": {
+    "nombre": "suralis oficina",
+    "tipo": "unico",
+    "monto": "37900",
+    "fecha_inicio": "2026-03-16",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D52\nTipo Excel: agua\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 37900",
+    "unidad_negocio_ref": 9,
+    "unidad_negocio": "oficina",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.403Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 168,
+  "fields": {
+    "nombre": "saesa oficina",
+    "tipo": "unico",
+    "monto": "140000",
+    "fecha_inicio": "2026-03-20",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D53\nTipo Excel: luz\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 140000",
+    "unidad_negocio_ref": 9,
+    "unidad_negocio": "oficina",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.419Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 169,
+  "fields": {
+    "nombre": "iva noviembre 2025 pagar tarjeta de credito",
+    "tipo": "unico",
+    "monto": "4795135",
+    "fecha_inicio": "2026-03-20",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D54\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 4795135",
+    "unidad_negocio_ref": 7,
+    "unidad_negocio": "iva",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.434Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 170,
+  "fields": {
+    "nombre": "prestamo vivian",
+    "tipo": "credito",
+    "monto": "1118000",
+    "fecha_inicio": "2026-03-20",
+    "frecuencia": "mensual",
+    "total_cuotas": 3,
+    "cuotas_restantes": 2,
+    "descripcion": "Importado desde Excel\r\nID origen: D55\r\nTipo Excel: prestamo\r\nTipo de pago Excel: MENSUAL\r\nCuotas Excel: 3/6\r\nSaldo Excel al importar: 1118000",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.449Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 171,
+  "fields": {
+    "nombre": "agua cauquenes febrero",
+    "tipo": "unico",
+    "monto": "45677",
+    "fecha_inicio": "2026-03-20",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D56\nSaldo Excel al importar: 45677",
+    "unidad_negocio_ref": 3,
+    "unidad_negocio": "cauquenes",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.474Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 172,
+  "fields": {
+    "nombre": "Acuerdo inspeccion de trabajo Esteban",
+    "tipo": "fijo",
+    "monto": "400000",
+    "fecha_inicio": "2026-03-20",
+    "frecuencia": "mensual",
+    "total_cuotas": 3,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D57\nTipo de pago Excel: MENSUAL\nCuotas Excel: 2/3\nSaldo Excel al importar: 400000",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.490Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 173,
+  "fields": {
+    "nombre": "caja los andes vivian",
+    "tipo": "credito",
+    "monto": "271465",
+    "fecha_inicio": "2026-03-24",
+    "frecuencia": "mensual",
+    "total_cuotas": 60,
+    "cuotas_restantes": 57,
+    "descripcion": "Importado desde Excel\nID origen: D58\nTipo Excel: prestamo\nTipo de pago Excel: MENSUAL\nCuotas Excel: 3/60\nSaldo Excel al importar: 271465",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.506Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 174,
+  "fields": {
+    "nombre": "prestamo vivian",
+    "tipo": "credito",
+    "monto": "1796000",
+    "fecha_inicio": "2026-03-25",
+    "frecuencia": "mensual",
+    "total_cuotas": 12,
+    "cuotas_restantes": 11,
+    "descripcion": "Importado desde Excel\nID origen: D59\nTipo Excel: prestamo\nTipo de pago Excel: MENSUAL\nCuotas Excel: 1/12\nSaldo Excel al importar: 1796000",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.756Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 175,
+  "fields": {
+    "nombre": "credito carolina",
+    "tipo": "credito",
+    "monto": "1167307",
+    "fecha_inicio": "2026-03-25",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D60\nTipo Excel: credito\nTipo de pago Excel: MENSUAL\nSaldo Excel al importar: 1167307",
+    "unidad_negocio_ref": 2,
+    "unidad_negocio": "carolina",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.809Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 176,
+  "fields": {
+    "nombre": "cheque pago furgon",
+    "tipo": "unico",
+    "monto": "1500000",
+    "fecha_inicio": "2026-03-26",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\r\nID origen: D61\r\nTipo de pago Excel: UNICO\r\nSaldo Excel al importar: 1500000",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.824Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 177,
+  "fields": {
+    "nombre": "cheques hospital",
+    "tipo": "unico",
+    "monto": "316573",
+    "fecha_inicio": "2026-02-27",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D62\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 316573",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.837Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 178,
+  "fields": {
+    "nombre": "prestamo pargua",
+    "tipo": "unico",
+    "monto": "8000000",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "Importado desde Excel\nID origen: D63\nTipo de pago Excel: UNICO\nSaldo Excel al importar: 7500000",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.850Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 179,
+  "fields": {
+    "nombre": "escuela / carolina",
+    "tipo": "fijo",
+    "monto": "1519500",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 10,
+    "cuotas_restantes": 9,
+    "descripcion": "Importado desde Excel\nID origen: D64\nTipo Excel: mensualidad\nTipo de pago Excel: MENSUAL\nCuotas Excel: 1/10\nSaldo Excel al importar: 1519500",
+    "unidad_negocio_ref": 2,
+    "unidad_negocio": "carolina",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.876Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 180,
+  "fields": {
+    "nombre": "pago auto prestamo personal",
+    "tipo": "fijo",
+    "monto": "1200000",
+    "fecha_inicio": "2026-03-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 5,
+    "cuotas_restantes": 4,
+    "descripcion": "Importado desde Excel\nID origen: D65\nTipo de pago Excel: MENSUAL\nCuotas Excel: 1/5\nSaldo Excel al importar: 1200000",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-19T21:43:14.920Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 181,
+  "fields": {
+    "nombre": "prestamo vivian",
+    "tipo": "credito",
+    "monto": "500000",
+    "fecha_inicio": "2026-04-26",
+    "frecuencia": "mensual",
+    "total_cuotas": 12,
+    "cuotas_restantes": 12,
+    "descripcion": "",
+    "unidad_negocio_ref": 16,
+    "unidad_negocio": "vivian",
+    "activo": true,
+    "creado": "2026-03-27T19:57:31.653Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 182,
+  "fields": {
+    "nombre": "chickol",
+    "tipo": "fijo",
+    "monto": "2160000",
+    "fecha_inicio": "2026-03-06",
+    "frecuencia": "unico",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-27T21:08:21.198Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 183,
+  "fields": {
+    "nombre": "arriendo rio bueno",
+    "tipo": "fijo",
+    "monto": "119457",
+    "fecha_inicio": "2026-03-06",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-27T21:10:18.781Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 184,
+  "fields": {
+    "nombre": "arriendo frutillar 3 facturas",
+    "tipo": "fijo",
+    "monto": "219470",
+    "fecha_inicio": "2026-03-26",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-27T21:15:28.118Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 185,
+  "fields": {
+    "nombre": "arriendo frutillar 1 factura",
+    "tipo": "fijo",
+    "monto": "73780",
+    "fecha_inicio": "2026-03-26",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-27T21:16:34.921Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 186,
+  "fields": {
+    "nombre": "gas oficina",
+    "tipo": "unico",
+    "monto": "38260",
+    "fecha_inicio": "2026-03-26",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-27T21:18:39.183Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 187,
+  "fields": {
+    "nombre": "luz puerto varas",
+    "tipo": "fijo",
+    "monto": "17800",
+    "fecha_inicio": "2026-03-26",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 10,
+    "unidad_negocio": "otros",
+    "activo": true,
+    "creado": "2026-03-27T21:19:59.367Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 188,
+  "fields": {
+    "nombre": "arriendo espacio terminal 27000",
+    "tipo": "unico",
+    "monto": "853410",
+    "fecha_inicio": "2026-04-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-04-06T15:33:40.653Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 189,
+  "fields": {
+    "nombre": "fac 26999 terminal rincon",
+    "tipo": "fijo",
+    "monto": "711175",
+    "fecha_inicio": "2026-04-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-04-06T15:34:40.911Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 190,
+  "fields": {
+    "nombre": "fac 22078 exenta contribuciones terminal abril",
+    "tipo": "unico",
+    "monto": "11664",
+    "fecha_inicio": "2026-04-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-04-06T15:35:24.086Z"
+  }
+},
+{
+  "model": "pagos.pagoprogramado",
+  "pk": 191,
+  "fields": {
+    "nombre": "contribuciones terminal fac22075",
+    "tipo": "unico",
+    "monto": "5400",
+    "fecha_inicio": "2026-04-05",
+    "frecuencia": "mensual",
+    "total_cuotas": 1,
+    "cuotas_restantes": 1,
+    "descripcion": "",
+    "unidad_negocio_ref": 13,
+    "unidad_negocio": "terminal",
+    "activo": true,
+    "creado": "2026-04-06T15:35:56.897Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 53,
+  "fields": {
+    "pago": 118,
+    "fecha_pago": "2026-03-09",
+    "monto": "344600.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D3 | Saldo Excel: 294600 | Tipo de pago Excel: UNICO",
+    "creado": "2026-03-19T21:43:13.331Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 54,
+  "fields": {
+    "pago": 119,
+    "fecha_pago": "2026-03-19",
+    "monto": "700000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D4 | Saldo Excel: 590031 | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:13.358Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 55,
+  "fields": {
+    "pago": 120,
+    "fecha_pago": "2026-02-05",
+    "monto": "350000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D5 | Saldo Excel: 594944 | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:13.384Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 56,
+  "fields": {
+    "pago": 126,
+    "fecha_pago": "2026-02-12",
+    "monto": "15275800.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D11 | Saldo Excel: 15286311 | Tipo Excel: abono | Tipo de pago Excel: UNICA",
+    "creado": "2026-03-19T21:43:13.477Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 57,
+  "fields": {
+    "pago": 128,
+    "fecha_pago": "2026-03-05",
+    "monto": "186894.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D13 | Tipo Excel: prestamo | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:13.517Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 58,
+  "fields": {
+    "pago": 129,
+    "fecha_pago": "2026-03-05",
+    "monto": "250000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D14 | Tipo Excel: prestamo | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:13.547Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 59,
+  "fields": {
+    "pago": 130,
+    "fecha_pago": "2026-03-05",
+    "monto": "150000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D15 | Tipo Excel: prestamo | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:13.574Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 60,
+  "fields": {
+    "pago": 132,
+    "fecha_pago": "2026-03-05",
+    "monto": "2108260.00",
+    "metodo_pago": "credito",
+    "observacion": "Importado desde Excel | ID origen: D17 | Tipo Excel: credito | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:13.614Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 61,
+  "fields": {
+    "pago": 133,
+    "fecha_pago": "2026-03-06",
+    "monto": "2709179.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D18 | Tipo Excel: prestamo | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:13.650Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 62,
+  "fields": {
+    "pago": 143,
+    "fecha_pago": "2026-03-05",
+    "monto": "2131035.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D28 | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:13.800Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 63,
+  "fields": {
+    "pago": 149,
+    "fecha_pago": "2026-03-12",
+    "monto": "200000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D34 | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:13.896Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 64,
+  "fields": {
+    "pago": 150,
+    "fecha_pago": "2026-03-10",
+    "monto": "403875.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D35 | Saldo Excel: 3324381 | Tipo de pago Excel: UNICO",
+    "creado": "2026-03-19T21:43:13.921Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 65,
+  "fields": {
+    "pago": 152,
+    "fecha_pago": "2026-03-15",
+    "monto": "6490.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D37 | Tipo de pago Excel: UNICO",
+    "creado": "2026-03-19T21:43:13.958Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 66,
+  "fields": {
+    "pago": 153,
+    "fecha_pago": "2026-03-15",
+    "monto": "6490.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D38 | Tipo de pago Excel: UNICO",
+    "creado": "2026-03-19T21:43:13.985Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 67,
+  "fields": {
+    "pago": 154,
+    "fecha_pago": "2026-03-15",
+    "monto": "11390.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D39 | Tipo de pago Excel: UNICO",
+    "creado": "2026-03-19T21:43:14.012Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 68,
+  "fields": {
+    "pago": 155,
+    "fecha_pago": "2026-03-15",
+    "monto": "152256.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D40 | Tipo de pago Excel: UNICO",
+    "creado": "2026-03-19T21:43:14.040Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 69,
+  "fields": {
+    "pago": 156,
+    "fecha_pago": "2026-03-15",
+    "monto": "11390.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D41 | Tipo de pago Excel: UNICO",
+    "creado": "2026-03-19T21:43:14.067Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 70,
+  "fields": {
+    "pago": 157,
+    "fecha_pago": "2026-03-15",
+    "monto": "142903.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D42 | Tipo de pago Excel: UNICO",
+    "creado": "2026-03-19T21:43:14.095Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 71,
+  "fields": {
+    "pago": 158,
+    "fecha_pago": "2026-03-15",
+    "monto": "258971.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D43 | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:14.123Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 72,
+  "fields": {
+    "pago": 159,
+    "fecha_pago": "2026-03-10",
+    "monto": "14990.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D44 | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:14.155Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 73,
+  "fields": {
+    "pago": 160,
+    "fecha_pago": "2026-03-10",
+    "monto": "15514.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D45 | Tipo de pago Excel: MENSUAL",
+    "creado": "2026-03-19T21:43:14.183Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 75,
+  "fields": {
+    "pago": 178,
+    "fecha_pago": "2026-03-05",
+    "monto": "500000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "Importado desde Excel | ID origen: D63 | Saldo Excel: 7500000 | Tipo de pago Excel: UNICO",
+    "creado": "2026-03-19T21:43:14.865Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 76,
+  "fields": {
+    "pago": 126,
+    "fecha_pago": "2026-03-23",
+    "monto": "575000.00",
+    "metodo_pago": "efectivo",
+    "observacion": "",
+    "creado": "2026-03-23T17:02:41.681Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 77,
+  "fields": {
+    "pago": 125,
+    "fecha_pago": "2026-03-10",
+    "monto": "1178513.00",
+    "metodo_pago": "debito",
+    "observacion": "",
+    "creado": "2026-03-24T19:31:09.620Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 78,
+  "fields": {
+    "pago": 162,
+    "fecha_pago": "2026-03-27",
+    "monto": "250000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T19:29:09.050Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 79,
+  "fields": {
+    "pago": 161,
+    "fecha_pago": "2026-03-09",
+    "monto": "1050000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T19:31:00.814Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 80,
+  "fields": {
+    "pago": 165,
+    "fecha_pago": "2026-03-14",
+    "monto": "980000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T19:49:22.344Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 81,
+  "fields": {
+    "pago": 170,
+    "fecha_pago": "2026-03-20",
+    "monto": "1118000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T19:53:16.367Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 82,
+  "fields": {
+    "pago": 173,
+    "fecha_pago": "2026-03-24",
+    "monto": "271465.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T19:54:08.353Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 83,
+  "fields": {
+    "pago": 174,
+    "fecha_pago": "2026-03-25",
+    "monto": "1796000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T19:54:45.315Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 84,
+  "fields": {
+    "pago": 131,
+    "fecha_pago": "2026-03-24",
+    "monto": "826793.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T20:03:07.068Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 85,
+  "fields": {
+    "pago": 126,
+    "fecha_pago": "2026-03-25",
+    "monto": "1000000.00",
+    "metodo_pago": "efectivo",
+    "observacion": "",
+    "creado": "2026-03-27T21:01:23.492Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 86,
+  "fields": {
+    "pago": 145,
+    "fecha_pago": "2026-03-24",
+    "monto": "1641449.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:04:06.419Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 87,
+  "fields": {
+    "pago": 144,
+    "fecha_pago": "2026-03-24",
+    "monto": "524974.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:04:42.583Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 88,
+  "fields": {
+    "pago": 146,
+    "fecha_pago": "2026-03-24",
+    "monto": "462973.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:05:14.334Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 89,
+  "fields": {
+    "pago": 148,
+    "fecha_pago": "2026-03-24",
+    "monto": "63144.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:05:54.433Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 90,
+  "fields": {
+    "pago": 182,
+    "fecha_pago": "2026-03-06",
+    "monto": "560000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:08:39.684Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 91,
+  "fields": {
+    "pago": 183,
+    "fecha_pago": "2026-03-06",
+    "monto": "119457.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:10:34.807Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 92,
+  "fields": {
+    "pago": 164,
+    "fecha_pago": "2026-03-24",
+    "monto": "5000000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:13:11.133Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 93,
+  "fields": {
+    "pago": 172,
+    "fecha_pago": "2026-03-23",
+    "monto": "400000.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:14:08.671Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 94,
+  "fields": {
+    "pago": 184,
+    "fecha_pago": "2026-03-26",
+    "monto": "219470.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:15:42.655Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 95,
+  "fields": {
+    "pago": 186,
+    "fecha_pago": "2026-03-26",
+    "monto": "38260.00",
+    "metodo_pago": "efectivo",
+    "observacion": "",
+    "creado": "2026-03-27T21:18:53.006Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 96,
+  "fields": {
+    "pago": 187,
+    "fecha_pago": "2026-03-26",
+    "monto": "17800.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-27T21:20:14.360Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 97,
+  "fields": {
+    "pago": 147,
+    "fecha_pago": "2026-03-29",
+    "monto": "1505446.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-30T12:56:38.372Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 98,
+  "fields": {
+    "pago": 150,
+    "fecha_pago": "2026-03-30",
+    "monto": "215766.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-30T16:37:49.088Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 99,
+  "fields": {
+    "pago": 151,
+    "fecha_pago": "2026-03-31",
+    "monto": "1729550.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-03-31T14:04:51.102Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 100,
+  "fields": {
+    "pago": 126,
+    "fecha_pago": "2026-03-25",
+    "monto": "200000.00",
+    "metodo_pago": "efectivo",
+    "observacion": "",
+    "creado": "2026-03-31T14:24:59.047Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 101,
+  "fields": {
+    "pago": 126,
+    "fecha_pago": "2026-04-02",
+    "monto": "475000.00",
+    "metodo_pago": "efectivo",
+    "observacion": "",
+    "creado": "2026-04-02T13:40:19.611Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 102,
+  "fields": {
+    "pago": 119,
+    "fecha_pago": "2026-04-02",
+    "monto": "590031.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-04-02T17:31:56.287Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 103,
+  "fields": {
+    "pago": 171,
+    "fecha_pago": "2026-04-02",
+    "monto": "45677.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-04-02T17:33:59.367Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 104,
+  "fields": {
+    "pago": 131,
+    "fecha_pago": "2026-04-02",
+    "monto": "567523.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-04-02T17:35:34.968Z"
+  }
+},
+{
+  "model": "pagos.pagoreal",
+  "pk": 105,
+  "fields": {
+    "pago": 120,
+    "fecha_pago": "2026-04-02",
+    "monto": "594944.00",
+    "metodo_pago": "transferencia",
+    "observacion": "",
+    "creado": "2026-04-02T21:43:46.675Z"
+  }
+}
+]
