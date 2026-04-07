@@ -2609,6 +2609,7 @@ def reportes_financieros(request):
 
         resumen_unidades_periodo = _resumen_pagos_por_unidad(pagos_qs)
 
+        # PROYECCIÓN FUTURA
         proyeccion_json = generar_proyeccion_json(
             hasta,
             unidad_negocio=filtro_unidad_negocio or None
@@ -2624,15 +2625,10 @@ def reportes_financieros(request):
             unidad_negocio=filtro_unidad_negocio or None
         )
 
-        form = ReportesFiltroForm(initial={
-            "fecha_desde": desde,
-            "fecha_hasta": hasta
-        })
-    else:
-        form = ReportesFiltroForm(initial={
-            "fecha_desde": desde,
-            "fecha_hasta": hasta
-        })
+    form = ReportesFiltroForm(initial={
+        "fecha_desde": desde,
+        "fecha_hasta": hasta
+    })
 
     return _render_view(request, 'pagos/reportes.html', {
         'pagos': pagos_qs,
@@ -2649,7 +2645,6 @@ def reportes_financieros(request):
         'resumen_unidades_periodo': resumen_unidades_periodo,
         'filtro_unidad_negocio': filtro_unidad_negocio,
         'unidades_negocio_disponibles': _get_unidades_negocio_disponibles_reportes(),
-
         'proyeccion_json': proyeccion_json,
         'proyeccion_data': proyeccion_data,
         'proyeccion_tabla': proyeccion_tabla,
