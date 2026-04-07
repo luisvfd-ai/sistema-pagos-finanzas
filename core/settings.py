@@ -88,7 +88,7 @@ STORAGES = {
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
-    },
+    }
 }
 
 MEDIA_URL = '/media/'
