@@ -1,0 +1,257 @@
+{% load money_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerta financiera urgente</title>
+</head>
+<body style="margin:0; padding:0; background:#f3f4f6; font-family:Arial, sans-serif; color:#1f2937;">
+
+    <div style="max-width:980px; margin:0 auto; padding:24px;">
+        <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:14px; overflow:hidden;">
+
+            <div style="background:#b91c1c; color:#ffffff; padding:24px 28px;">
+                <div style="font-size:12px; letter-spacing:.08em; text-transform:uppercase; opacity:.9;">
+                    Sistema de Gestión Financiera
+                </div>
+                <h1 style="margin:8px 0 0 0; font-size:26px; line-height:1.2;">
+                    Alerta financiera urgente
+                </h1>
+                <p style="margin:10px 0 0 0; font-size:14px; color:#fee2e2;">
+                    Resumen de compromisos vencidos y compromisos que vencen en máximo {{ dias_urgentes }} día(s), calculados por <strong>saldo pendiente real</strong>.
+                </p>
+            </div>
+
+            <div style="padding:24px 28px;">
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:24px;">
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Total urgente</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">{{ resumen.total_eventos }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Saldo pendiente total</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">{{ resumen.total_saldo_pendiente|clp }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Vencidas</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">
+                            {{ resumen.vencidas_count }} / {{ resumen.vencidas_saldo|clp }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Vencen hoy</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">
+                            {{ resumen.hoy_count }} / {{ resumen.hoy_saldo|clp }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Próximas hasta {{ dias_urgentes }} día(s)</strong></td>
+                        <td style="padding:10px 12px; border:1px solid #e5e7eb;">
+                            {{ resumen.proximas_count }} / {{ resumen.proximas_saldo|clp }}
+                        </td>
+                    </tr>
+                </table>
+
+                {% if eventos_agrupados.vencidas %}
+                <div style="margin-bottom:28px;">
+                    <h3 style="margin:0 0 12px 0; font-size:20px; color:#991b1b;">Vencidas</h3>
+
+                    {% for unidad in eventos_agrupados.vencidas %}
+                    <div style="margin-bottom:18px; border:1px solid #d1d5db; border-radius:14px; overflow:hidden;">
+                        <div style="padding:14px 16px; background:#111827; color:#ffffff;">
+                            <div style="font-size:18px; font-weight:bold;">{{ unidad.unidad }}</div>
+                            <div style="margin-top:4px; font-size:13px; color:#d1d5db;">
+                                {{ unidad.cantidad }} compromiso(s) · Saldo pendiente total: {{ unidad.saldo_total|clp }}
+                            </div>
+                        </div>
+
+                        {% for grupo in unidad.categorias %}
+                        <div style="border-top:1px solid #e5e7eb;">
+                            <div style="padding:12px 14px; background:#fef2f2; border-bottom:1px solid #e5e7eb;">
+                                <div style="font-size:16px; font-weight:bold; color:#7f1d1d;">{{ grupo.categoria }}</div>
+                                <div style="margin-top:4px; font-size:13px; color:#7f1d1d;">
+                                    {{ grupo.cantidad }} compromiso(s) · Saldo pendiente: {{ grupo.saldo_total|clp }}
+                                </div>
+                            </div>
+
+                            <table style="border-collapse:collapse; width:100%;">
+                                <thead>
+                                    <tr style="background:#f9fafb; color:#111827;">
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:left; width:120px;">Fecha</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:left;">Concepto</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:right; width:140px;">Pagado</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:right; width:170px;">Saldo pendiente</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:left; width:120px;">Prioridad</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for e in grupo.eventos %}
+                                    <tr style="background: {{ e.prioridad_fila_bg }};">
+                                        <td style="padding:9px; border:1px solid #e5e7eb;">{{ e.fecha|date:"d-m-Y" }}</td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb;">
+                                            <div style="font-weight:bold; margin-bottom:2px;">{{ e.nombre }}</div>
+                                            {% if e.cantidad_eventos_pendientes %}
+                                            <div style="font-size:12px; color:#6b7280;">Cuotas/eventos pendientes: {{ e.cantidad_eventos_pendientes }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb; text-align:right;">{{ e.pagado_acumulado|clp }}</td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb; text-align:right; font-weight:bold;">{{ e.saldo_pendiente_real|clp }}</td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb;">
+                                            <span style="display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:bold; background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                                {{ e.prioridad_label }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if eventos_agrupados.hoy %}
+                <div style="margin-bottom:28px;">
+                    <h3 style="margin:0 0 12px 0; font-size:20px; color:#92400e;">Vencen hoy</h3>
+
+                    {% for unidad in eventos_agrupados.hoy %}
+                    <div style="margin-bottom:18px; border:1px solid #d1d5db; border-radius:14px; overflow:hidden;">
+                        <div style="padding:14px 16px; background:#111827; color:#ffffff;">
+                            <div style="font-size:18px; font-weight:bold;">{{ unidad.unidad }}</div>
+                            <div style="margin-top:4px; font-size:13px; color:#d1d5db;">
+                                {{ unidad.cantidad }} compromiso(s) · Saldo pendiente total: {{ unidad.saldo_total|clp }}
+                            </div>
+                        </div>
+
+                        {% for grupo in unidad.categorias %}
+                        <div style="border-top:1px solid #e5e7eb;">
+                            <div style="padding:12px 14px; background:#fffbeb; border-bottom:1px solid #e5e7eb;">
+                                <div style="font-size:16px; font-weight:bold; color:#92400e;">{{ grupo.categoria }}</div>
+                                <div style="margin-top:4px; font-size:13px; color:#92400e;">
+                                    {{ grupo.cantidad }} compromiso(s) · Saldo pendiente: {{ grupo.saldo_total|clp }}
+                                </div>
+                            </div>
+
+                            <table style="border-collapse:collapse; width:100%;">
+                                <thead>
+                                    <tr style="background:#f9fafb; color:#111827;">
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:left; width:120px;">Fecha</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:left;">Concepto</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:right; width:140px;">Pagado</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:right; width:170px;">Saldo pendiente</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:left; width:120px;">Prioridad</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for e in grupo.eventos %}
+                                    <tr style="background: {{ e.prioridad_fila_bg }};">
+                                        <td style="padding:9px; border:1px solid #e5e7eb;">{{ e.fecha|date:"d-m-Y" }}</td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb;">
+                                            <div style="font-weight:bold; margin-bottom:2px;">{{ e.nombre }}</div>
+                                            {% if e.cantidad_eventos_pendientes %}
+                                            <div style="font-size:12px; color:#6b7280;">Cuotas/eventos pendientes: {{ e.cantidad_eventos_pendientes }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb; text-align:right;">{{ e.pagado_acumulado|clp }}</td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb; text-align:right; font-weight:bold;">{{ e.saldo_pendiente_real|clp }}</td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb;">
+                                            <span style="display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:bold; background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                                {{ e.prioridad_label }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if eventos_agrupados.proximas %}
+                <div style="margin-bottom:18px;">
+                    <h3 style="margin:0 0 12px 0; font-size:20px; color:#1d4ed8;">Próximas hasta {{ dias_urgentes }} día(s)</h3>
+
+                    {% for unidad in eventos_agrupados.proximas %}
+                    <div style="margin-bottom:18px; border:1px solid #d1d5db; border-radius:14px; overflow:hidden;">
+                        <div style="padding:14px 16px; background:#111827; color:#ffffff;">
+                            <div style="font-size:18px; font-weight:bold;">{{ unidad.unidad }}</div>
+                            <div style="margin-top:4px; font-size:13px; color:#d1d5db;">
+                                {{ unidad.cantidad }} compromiso(s) · Saldo pendiente total: {{ unidad.saldo_total|clp }}
+                            </div>
+                        </div>
+
+                        {% for grupo in unidad.categorias %}
+                        <div style="border-top:1px solid #e5e7eb;">
+                            <div style="padding:12px 14px; background:#eff6ff; border-bottom:1px solid #e5e7eb;">
+                                <div style="font-size:16px; font-weight:bold; color:#1d4ed8;">{{ grupo.categoria }}</div>
+                                <div style="margin-top:4px; font-size:13px; color:#1d4ed8;">
+                                    {{ grupo.cantidad }} compromiso(s) · Saldo pendiente: {{ grupo.saldo_total|clp }}
+                                </div>
+                            </div>
+
+                            <table style="border-collapse:collapse; width:100%;">
+                                <thead>
+                                    <tr style="background:#f9fafb; color:#111827;">
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:left; width:120px;">Fecha</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:left;">Concepto</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:right; width:140px;">Pagado</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:right; width:170px;">Saldo pendiente</th>
+                                        <th style="padding:10px; border:1px solid #e5e7eb; text-align:left; width:120px;">Prioridad</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for e in grupo.eventos %}
+                                    <tr style="background: {{ e.prioridad_fila_bg }};">
+                                        <td style="padding:9px; border:1px solid #e5e7eb;">{{ e.fecha|date:"d-m-Y" }}</td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb;">
+                                            <div style="font-weight:bold; margin-bottom:2px;">{{ e.nombre }}</div>
+                                            {% if e.cantidad_eventos_pendientes %}
+                                            <div style="font-size:12px; color:#6b7280;">Cuotas/eventos pendientes: {{ e.cantidad_eventos_pendientes }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb; text-align:right;">{{ e.pagado_acumulado|clp }}</td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb; text-align:right; font-weight:bold;">{{ e.saldo_pendiente_real|clp }}</td>
+                                        <td style="padding:9px; border:1px solid #e5e7eb;">
+                                            <span style="display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:bold; background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                                {{ e.prioridad_label }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if not eventos %}
+                <table style="border-collapse:collapse; width:100%;">
+                    <tbody>
+                        <tr>
+                            <td style="padding:12px; border:1px solid #e5e7eb; text-align:center; color:#6b7280;">
+                                No hay alertas urgentes.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                {% endif %}
+
+                <div style="margin-top:20px; padding-top:14px; border-top:1px solid #e5e7eb; color:#6b7280; font-size:12px;">
+                    Generado el {{ fecha_generacion|date:"d-m-Y H:i" }}.
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

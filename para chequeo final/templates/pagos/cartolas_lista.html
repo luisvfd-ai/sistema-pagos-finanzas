@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load money_filters %}
+
+{% block title %}Cartolas bancarias{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">🏦 Movimientos bancarios</h3>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-dark" href="{% url 'cartolas_sugerencias' %}">🧠 Sugerencias</a>
+            <a class="btn btn-outline-secondary" href="{% url 'conciliacion_panel' %}">📊 Conciliación</a>
+            <a class="btn btn-primary" href="{% url 'cartolas_importar' %}">📥 Importar cartola</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Total movimientos</div>
+                    <div class="fs-4 fw-bold">{{ kpi_total }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-success">
+                <div class="card-body">
+                    <div class="text-muted small">Conciliados</div>
+                    <div class="fs-4 fw-bold text-success">{{ kpi_conciliados }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-warning">
+                <div class="card-body">
+                    <div class="text-muted small">Pendientes</div>
+                    <div class="fs-4 fw-bold text-warning">{{ kpi_pendientes }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label">Buscar</label>
+                    <input type="text" name="q" class="form-control" value="{{ q }}" placeholder="Descripción, referencia, banco, cuenta">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Desde</label>
+                    <input type="date" name="desde" class="form-control" value="{{ desde|date:'Y-m-d' }}">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" name="hasta" class="form-control" value="{{ hasta|date:'Y-m-d' }}">
+                </div>
+
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="solo_no_conciliados" name="solo_no_conciliados" {% if solo_no_conciliados %}checked{% endif %}>
+                        <label class="form-check-label" for="solo_no_conciliados">
+                            Solo no conciliados
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-outline-primary w-100">Filtrar</button>
+                </div>
+            </form>
+
+            <div class="mt-3 text-muted small">
+                Monto total del filtro: <strong>{{ total|clp }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Banco / Cuenta</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Monto</th>
+                            <th>Estado</th>
+                            <th>Pago vinculado</th>
+                            <th>Nota</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mov in movimientos %}
+                        <tr>
+                            <td>{{ mov.fecha }}</td>
+                            <td>
+                                <div class="fw-semibold">{{ mov.descripcion }}</div>
+                                {% if mov.referencia %}
+                                    <div class="small text-muted">Ref: {{ mov.referencia }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ mov.banco|default:"—" }}</div>
+                                <div class="small text-muted">{{ mov.cuenta|default:"—" }}</div>
+                            </td>
+                            <td>
+                                {% if mov.tipo == "cargo" %}
+                                    <span class="badge bg-danger">Cargo</span>
+                                {% elif mov.tipo == "abono" %}
+                                    <span class="badge bg-success">Abono</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Desconocido</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold">{{ mov.monto|clp }}</td>
+                            <td>
+                                {% if mov.conciliado %}
+                                    <span class="badge bg-success">Conciliado</span>
+                                    {% if mov.conciliado_en %}
+                                        <div class="small text-muted">{{ mov.conciliado_en|date:"d-m-Y H:i" }}</div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if mov.pago_real %}
+                                    <div class="fw-semibold">{{ mov.pago_real.pago.nombre }}</div>
+                                    <div class="small text-muted">
+                                        {{ mov.pago_real.fecha_pago }} · {{ mov.pago_real.monto|clp }}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td style="max-width: 240px;">
+                                {{ mov.nota_conciliacion|default:"—" }}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                    {% if not mov.conciliado and mov.tipo == "cargo" %}
+                                        <a href="{% url 'cartolas_sugerencias' %}?mov_id={{ mov.id }}" class="btn btn-sm btn-outline-primary">
+                                            Sugerir
+                                        </a>
+                                    {% endif %}
+
+                                    {% if mov.conciliado %}
+                                        <a href="{% url 'cartolas_desconciliar' mov.id %}" class="btn btn-sm btn-outline-danger"
+                                           onclick="return confirm('¿Deseas desconciliar este movimiento?');">
+                                            Desconciliar
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                No hay movimientos para mostrar.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

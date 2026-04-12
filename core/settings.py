@@ -104,16 +104,16 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_USER = 'luisrincondelosnietos@gmail.com'
+EMAIL_HOST_PASSWORD = 'wucivfflatlmdtgl'
 DEFAULT_FROM_EMAIL = os.getenv(
     'DEFAULT_FROM_EMAIL',
-    'Sistema Financiero <no-reply@example.com>',
+    'Sistema Financiero <luisrincondelosnietos@gmail.com>',
 )
 
 ALERTAS_EMAIL_DESTINATARIOS = [
     'luisvfd@gmail.com',
-    'gerencia@elrincondelosnietos.cl',
+   
 ]
 ALERTAS_URGENTES_DIAS = 2
 ALERTAS_EMAIL_LIMITE_EVENTOS = 200

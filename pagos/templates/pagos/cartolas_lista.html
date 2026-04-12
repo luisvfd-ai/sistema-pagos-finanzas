@@ -155,10 +155,14 @@
                                     {% endif %}
 
                                     {% if mov.conciliado %}
-                                        <a href="{% url 'cartolas_desconciliar' mov.id %}" class="btn btn-sm btn-outline-danger"
-                                           onclick="return confirm('¿Deseas desconciliar este movimiento?');">
-                                            Desconciliar
-                                        </a>
+                                        <form method="post" action="{% url 'cartolas_desconciliar' mov.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next" value="cartolas_lista">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('¿Deseas desconciliar este movimiento?');">
+                                                Desconciliar
+                                            </button>
+                                        </form>
                                     {% endif %}
                                 </div>
                             </td>

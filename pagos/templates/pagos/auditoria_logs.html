@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}Auditoría del sistema{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1">Auditoría del sistema</h1>
+            <p class="text-muted mb-0">Registro de acciones críticas y cambios relevantes realizados por los usuarios.</p>
+        </div>
+        <div class="text-muted small">
+            Total encontrado: <strong>{{ page_obj.paginator.count }}</strong>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label">Buscar</label>
+                    <input type="text" name="q" value="{{ filtros.q }}" class="form-control" placeholder="Usuario, módulo, modelo o descripción">
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Acción</label>
+                    <select name="accion" class="form-select">
+                        <option value="">Todas</option>
+                        {% for value, label in acciones_disponibles %}
+                        <option value="{{ value }}" {% if filtros.accion == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Módulo</label>
+                    <select name="modulo" class="form-select">
+                        <option value="">Todos</option>
+                        {% for item in modulos_disponibles %}
+                        <option value="{{ item }}" {% if filtros.modulo == item %}selected{% endif %}>{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Modelo</label>
+                    <select name="modelo" class="form-select">
+                        <option value="">Todos</option>
+                        {% for item in modelos_disponibles %}
+                        <option value="{{ item }}" {% if filtros.modelo == item %}selected{% endif %}>{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Usuario</label>
+                    <select name="usuario" class="form-select">
+                        <option value="">Todos</option>
+                        {% for item in usuarios_disponibles %}
+                        <option value="{{ item.usuario_id }}" {% if filtros.usuario == item.usuario_id|stringformat:'s' %}selected{% endif %}>{{ item.username_snapshot }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Desde</label>
+                    <input type="date" name="fecha_desde" value="{{ filtros.fecha_desde }}" class="form-control">
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" name="fecha_hasta" value="{{ filtros.fecha_hasta }}" class="form-control">
+                </div>
+
+                <div class="col-12 col-md-8 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-1"></i> Filtrar
+                    </button>
+                    <a href="{% url 'auditoria_logs' %}" class="btn btn-outline-secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Módulo</th>
+                        <th>Modelo</th>
+                        <th>Objeto</th>
+                        <th>Descripción</th>
+                        <th>Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="small text-nowrap">
+                            {{ log.creado|date:"d/m/Y H:i" }}
+                        </td>
+                        <td class="small">
+                            {{ log.username_snapshot|default:"Sistema" }}
+                        </td>
+                        <td>
+                            <span class="badge text-bg-secondary">{{ log.get_accion_display }}</span>
+                            {% if log.es_critico %}
+                            <span class="badge text-bg-danger">Crítico</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">{{ log.modulo|default:"—" }}</td>
+                        <td class="small">{{ log.modelo|default:"—" }}</td>
+                        <td class="small">
+                            <div>{{ log.objeto_repr|default:"—" }}</div>
+                            {% if log.objeto_id %}
+                            <div class="text-muted">ID: {{ log.objeto_id }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="small" style="min-width: 220px;">{{ log.descripcion|default:"—" }}</td>
+                        <td style="min-width: 320px;">
+                            {% if log.datos_anteriores or log.datos_nuevos %}
+                            <details>
+                                <summary class="small text-primary" role="button">Ver cambios</summary>
+                                <div class="mt-2">
+                                    {% if log.datos_anteriores %}
+                                    <div class="mb-2">
+                                        <div class="fw-semibold small text-danger">Antes</div>
+                                        <pre class="bg-light border rounded p-2 small mb-0" style="white-space: pre-wrap;">{{ log.datos_anteriores|pprint }}</pre>
+                                    </div>
+                                    {% endif %}
+                                    {% if log.datos_nuevos %}
+                                    <div>
+                                        <div class="fw-semibold small text-success">Después</div>
+                                        <pre class="bg-light border rounded p-2 small mb-0" style="white-space: pre-wrap;">{{ log.datos_nuevos|pprint }}</pre>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </details>
+                            {% else %}
+                            <span class="text-muted small">Sin detalle</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No hay registros para los filtros seleccionados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="card-footer bg-white">
+            <nav aria-label="Paginación auditoría">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ filtros.q }}&accion={{ filtros.accion }}&modulo={{ filtros.modulo }}&modelo={{ filtros.modelo }}&usuario={{ filtros.usuario }}&fecha_desde={{ filtros.fecha_desde }}&fecha_hasta={{ filtros.fecha_hasta }}&page={{ page_obj.previous_page_number }}">Anterior</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item disabled">
+                        <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ filtros.q }}&accion={{ filtros.accion }}&modulo={{ filtros.modulo }}&modelo={{ filtros.modelo }}&usuario={{ filtros.usuario }}&fecha_desde={{ filtros.fecha_desde }}&fecha_hasta={{ filtros.fecha_hasta }}&page={{ page_obj.next_page_number }}">Siguiente</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

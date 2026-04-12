@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo|default:"Registrar Pago Real" }}{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="row">
+
+        <!-- FORMULARIO -->
+        <div class="col-lg-7">
+
+            <div class="card shadow-sm mb-4">
+
+                <div class="card-header {% if modo_edicion %}bg-warning text-dark{% else %}bg-primary text-white{% endif %}">
+                    <h5 class="mb-0">
+                        {% if modo_edicion %}
+                            ✏️ Editar pago real
+                        {% else %}
+                            💳 Registrar pago real
+                        {% endif %}
+                    </h5>
+                </div>
+
+                <div class="card-body">
+
+                    {% if modo_edicion and tiene_conciliacion %}
+                        <div class="alert alert-warning">
+                            <strong>⚠ Pago conciliado con movimiento bancario</strong>
+                            <div class="mt-2">
+                                Este pago real ya está vinculado a una conciliación bancaria.
+                            </div>
+
+                            {% if movimiento_conciliado %}
+                                <ul class="mb-2 mt-2 ps-3">
+                                    <li><strong>Fecha banco:</strong> {{ movimiento_conciliado.fecha|date:"d-m-Y" }}</li>
+                                    <li><strong>Monto:</strong> ${{ movimiento_conciliado.monto|floatformat:0 }}</li>
+                                    <li><strong>Banco:</strong> {{ movimiento_conciliado.banco|default:"—" }}</li>
+                                    <li><strong>Cuenta:</strong> {{ movimiento_conciliado.cuenta|default:"—" }}</li>
+                                    <li><strong>Fecha conciliación:</strong> {{ movimiento_conciliado.conciliado_en|date:"d-m-Y H:i" }}</li>
+                                </ul>
+                            {% endif %}
+
+                            <small class="text-muted">
+                                Si modificas monto, fecha, compromiso u observación, revisa luego la conciliación bancaria.
+                            </small>
+                        </div>
+                    {% endif %}
+
+                    <form method="post" novalidate id="form-pago-real">
+                        {% csrf_token %}
+
+                        <input type="hidden" name="next" value="{{ next }}">
+                        <input type="hidden" id="tiene-conciliacion" value="{% if tiene_conciliacion %}1{% else %}0{% endif %}">
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label class="form-label">Compromiso</label>
+                                {{ form.pago }}
+                                {% if form.pago.errors %}
+                                    <div class="text-danger small mt-1">{{ form.pago.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha pago</label>
+                                {{ form.fecha_pago }}
+                                {% if form.fecha_pago.errors %}
+                                    <div class="text-danger small mt-1">{{ form.fecha_pago.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Monto</label>
+                                {{ form.monto }}
+                                {% if form.monto.errors %}
+                                    <div class="text-danger small mt-1">{{ form.monto.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Método</label>
+                                {{ form.metodo_pago }}
+                                {% if form.metodo_pago.errors %}
+                                    <div class="text-danger small mt-1">{{ form.metodo_pago.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label">Observación</label>
+                                {{ form.observacion }}
+                                {% if form.observacion.errors %}
+                                    <div class="text-danger small mt-1">{{ form.observacion.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ next|default:'#' }}" class="btn btn-outline-secondary">
+                                Cancelar
+                            </a>
+                            <button class="btn {% if modo_edicion %}btn-warning{% else %}btn-success{% endif %}">
+                                {% if modo_edicion %}
+                                    💾 Guardar cambios
+                                {% else %}
+                                    💾 Registrar pago
+                                {% endif %}
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- PANEL FINANCIERO EN TIEMPO REAL -->
+        <div class="col-lg-5">
+
+            <div class="card shadow-sm">
+
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">📊 Estado financiero</h5>
+                </div>
+
+                <div class="card-body">
+
+                    <div id="panel-financiero" class="d-none">
+
+                        <h6 id="pf-nombre" class="fw-bold mb-3"></h6>
+
+                        <div class="mb-2 d-flex justify-content-between">
+                            <span>Total:</span>
+                            <strong id="pf-total"></strong>
+                        </div>
+
+                        <div class="mb-2 d-flex justify-content-between text-success">
+                            <span>Pagado:</span>
+                            <strong id="pf-pagado"></strong>
+                        </div>
+
+                        <div class="mb-2 d-flex justify-content-between text-danger">
+                            <span>Saldo pendiente:</span>
+                            <strong id="pf-saldo"></strong>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="progress" style="height: 22px;">
+                                <div id="pf-barra"
+                                     class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar"
+                                     style="width: 0%">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <span id="pf-estado" class="badge fs-6"></span>
+                        </div>
+
+                    </div>
+
+                    <div id="panel-vacio" class="text-muted text-center py-5">
+                        Selecciona un compromiso para ver su estado financiero.
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const pagoSelect = document.getElementById('id_pago');
+    const panel = document.getElementById('panel-financiero');
+    const panelVacio = document.getElementById('panel-vacio');
+
+    const nombreEl = document.getElementById('pf-nombre');
+    const totalEl = document.getElementById('pf-total');
+    const pagadoEl = document.getElementById('pf-pagado');
+    const saldoEl = document.getElementById('pf-saldo');
+    const barra = document.getElementById('pf-barra');
+    const estadoEl = document.getElementById('pf-estado');
+
+    const formPagoReal = document.getElementById('form-pago-real');
+    const tieneConciliacionInput = document.getElementById('tiene-conciliacion');
+
+    function formatoCLP(valor) {
+        return '$' + new Intl.NumberFormat('es-CL').format(valor);
+    }
+
+    function cargarInfoPago(pagoId) {
+        if (!pagoId) {
+            panel.classList.add('d-none');
+            panelVacio.classList.remove('d-none');
+            return;
+        }
+
+        const base = "{% url 'api_pago_info' 0 %}";
+        const url = base.replace('/0/', `/${pagoId}/`);
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+
+                panel.classList.remove('d-none');
+                panelVacio.classList.add('d-none');
+
+                nombreEl.innerText = data.nombre;
+                totalEl.innerText = formatoCLP(data.total);
+                pagadoEl.innerText = formatoCLP(data.pagado);
+                saldoEl.innerText = formatoCLP(data.saldo);
+
+                barra.style.width = data.porcentaje + '%';
+                barra.innerText = data.porcentaje + '%';
+
+                estadoEl.innerText = data.estado;
+                estadoEl.className = 'badge fs-6 ';
+
+                if (data.estado === 'PAGADO') {
+                    estadoEl.classList.add('bg-success');
+                } else if (data.estado === 'PARCIAL') {
+                    estadoEl.classList.add('bg-warning', 'text-dark');
+                } else {
+                    estadoEl.classList.add('bg-danger');
+                }
+
+            })
+            .catch(err => {
+                console.error('Error cargando datos financieros:', err);
+            });
+    }
+
+    if (pagoSelect) {
+        pagoSelect.addEventListener('change', function () {
+            cargarInfoPago(this.value);
+        });
+
+        if (pagoSelect.value) {
+            cargarInfoPago(pagoSelect.value);
+        }
+    }
+
+    if (formPagoReal) {
+
+        const montoInput = document.getElementById('id_monto');
+        const fechaInput = document.getElementById('id_fecha_pago');
+
+        const montoOriginal = montoInput ? montoInput.value : null;
+        const fechaOriginal = fechaInput ? fechaInput.value : null;
+
+        formPagoReal.addEventListener('submit', function (e) {
+
+            if (tieneConciliacionInput && tieneConciliacionInput.value === '1') {
+
+                let cambioCritico = false;
+
+                if (montoInput && montoInput.value !== montoOriginal) {
+                    cambioCritico = true;
+                }
+
+                if (fechaInput && fechaInput.value !== fechaOriginal) {
+                    cambioCritico = true;
+                }
+
+                if (cambioCritico) {
+                    const confirmado = confirm(
+                        '⚠ Este pago ya está conciliado.\n\n' +
+                        'Has modificado MONTO o FECHA.\n\n' +
+                        'Esto puede romper la conciliación bancaria.\n\n' +
+                        '¿Deseas continuar?'
+                    );
+
+                    if (!confirmado) {
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+    }
+
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Usuarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <h3 class="mb-0">👥 Usuarios del sistema</h3>
+
+        {% if user.is_superuser or perms.auth.add_user %}
+        <a href="{% url 'usuario_crear' %}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-1"></i> Nuevo usuario
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Rol</th>
+                            <th>Activo</th>
+                            <th>Superuser</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in usuarios %}
+                        <tr>
+                            <td>{{ item.obj.username }}</td>
+                            <td>{{ item.obj.first_name }} {{ item.obj.last_name }}</td>
+                            <td>{{ item.obj.email|default:"—" }}</td>
+                            <td>
+                                {% if item.obj.is_superuser %}
+                                    <span class="badge bg-dark">Superadmin</span>
+                                {% elif item.rol == 'Administrador' %}
+                                    <span class="badge bg-primary">Administrador</span>
+                                {% elif item.rol == 'Operador' %}
+                                    <span class="badge bg-warning text-dark">Operador</span>
+                                {% elif item.rol == 'Visualizador' %}
+                                    <span class="badge bg-secondary">Visualizador</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">Sin rol</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.obj.is_active %}
+                                    <span class="badge bg-success">Sí</span>
+                                {% else %}
+                                    <span class="badge bg-danger">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.obj.is_superuser %}
+                                    <span class="badge bg-dark">Sí</span>
+                                {% else %}
+                                    <span class="text-muted">No</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if not item.obj.is_superuser %}
+                                    {% if user.is_superuser or perms.auth.change_user %}
+                                    <a href="{% url 'usuario_editar' item.obj.id %}" class="btn btn-sm btn-outline-warning">
+                                        <i class="fas fa-pen me-1"></i> Editar
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted small">Sin edición</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="text-muted small">Sin edición</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">
+                                No existen usuarios registrados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

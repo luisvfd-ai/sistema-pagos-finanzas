@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pagos/css/forms.css' %}?v=empresa01">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="form-card">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3 mb-4">
+            <div>
+                <h2 class="mb-1">🏢 Datos de la empresa</h2>
+                <p class="text-muted mb-0">
+                    Configuración institucional base para esta instalación single-tenant.
+                </p>
+            </div>
+
+            <a href="{% url 'dashboard_financiero' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Volver al dashboard
+            </a>
+        </div>
+
+        {% if empresa_obj and empresa_obj.logo %}
+        <div class="mb-4 p-3 border rounded-4 bg-light">
+            <div class="small text-muted mb-2">Logo actual</div>
+            <img src="{{ empresa_obj.logo.url }}" alt="Logo empresa" style="max-width: 140px; max-height: 140px; object-fit: contain; background: #fff; border-radius: 14px; padding: 10px; border: 1px solid #e5e7eb;">
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                {% for field in form %}
+                <div class="col-12 {% if field.name == 'giro' or field.name == 'direccion' or field.name == 'logo' %}col-lg-12{% else %}col-md-6{% endif %}">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'dashboard_financiero' %}" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i> Guardar datos
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

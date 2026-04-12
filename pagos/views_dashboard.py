@@ -6,13 +6,14 @@ import re
 from datetime import datetime, date, timedelta
 import os
 from functools import wraps
-from .reports import generar_proyeccion_json, resumen_proyeccion
+from .reports import generar_proyeccion_json, resumen_proyeccion, analisis_proyeccion_recurrentes
 from .analytics import obtener_proyeccion_hasta_fecha
 
 from django import forms
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.db.models import Sum, Value, DecimalField, Count, Q
@@ -27,11 +28,15 @@ from django.http import FileResponse
 from .models import (
     PagoProgramado,
     PagoReal,
+    EventoPago,
     MovimientoBancario,
     ImportacionPago,
     ImportacionPagoDetalle,
     UnidadNegocio,
+    CategoriaRecurrente,
     EmpresaConfig,
+    RegistroAuditoria,
+    snapshot_instancia_auditoria,
     unidad_negocio_label_from_codigo,
 )
 from .forms import (
@@ -41,6 +46,7 @@ from .forms import (
     AutoConciliacionForm,
     PagosImportExcelForm,
     UnidadNegocioForm,
+    CategoriaRecurrenteForm,
 )
 
 from .dashboard import (
@@ -58,6 +64,8 @@ from .dashboard import (
     listar_compromisos_financieros,
     resumen_estados_compromisos,
     resumen_compromisos_por_unidad,
+    resumen_recurrentes_por_categoria,
+    resumen_recurrentes_por_unidad_categoria,
 )
 
 
@@ -68,12 +76,20 @@ VIEW_PERMISSION_MAP = {
     'pagos_lista': ['pagos.view_pagoprogramado'],
     'pagos_crear': ['pagos.add_pagoprogramado'],
     'pagos_editar': ['pagos.change_pagoprogramado'],
+    'pagos_anular': ['pagos.change_pagoprogramado'],
+    'pagos_eliminar_definitivo': ['pagos.delete_pagoprogramado'],
     'unidades_negocio_lista': ['pagos.view_pagoprogramado'],
     'unidades_negocio_crear': ['pagos.change_pagoprogramado'],
     'unidades_negocio_editar': ['pagos.change_pagoprogramado'],
     'unidades_negocio_toggle': ['pagos.change_pagoprogramado'],
     'unidades_negocio_eliminar': ['pagos.change_pagoprogramado'],
+    'categorias_recurrentes_lista': ['pagos.view_pagoprogramado'],
+    'categorias_recurrentes_crear': ['pagos.change_pagoprogramado'],
+    'categorias_recurrentes_editar': ['pagos.change_pagoprogramado'],
+    'categorias_recurrentes_toggle': ['pagos.change_pagoprogramado'],
+    'categorias_recurrentes_eliminar': ['pagos.change_pagoprogramado'],
     'empresa_configuracion': ['pagos.change_pagoprogramado'],
+    'auditoria_logs': ['pagos.view_pagoprogramado'],
     'ayuda': ['pagos.view_pagoprogramado'],
 
     'pagos_importar_excel': ['pagos.add_importacionpago'],
@@ -193,6 +209,52 @@ def _render_view(request, template_name, context=None, *args, **kwargs):
     return render(request, template_name, contexto, *args, **kwargs)
 
 
+def _registrar_auditoria(
+    request,
+    *,
+    accion,
+    modulo,
+    objeto=None,
+    modelo='',
+    descripcion='',
+    antes=None,
+    despues=None,
+    es_critico=False,
+):
+    try:
+        RegistroAuditoria.registrar(
+            usuario=request.user if getattr(request, 'user', None) and request.user.is_authenticated else None,
+            accion=accion,
+            modulo=modulo,
+            modelo=modelo or (objeto.__class__.__name__ if objeto is not None else ''),
+            objeto_id=getattr(objeto, 'pk', '') if objeto is not None else '',
+            objeto_repr=str(objeto) if objeto is not None else '',
+            descripcion=descripcion,
+            antes=antes or {},
+            despues=despues or {},
+            request=request,
+            es_critico=es_critico,
+        )
+    except Exception:
+        return None
+
+
+def _audit_diff(antes, despues):
+    before = antes or {}
+    after = despues or {}
+    keys = sorted(set(before.keys()) | set(after.keys()))
+    diff = {}
+
+    for key in keys:
+        if before.get(key) != after.get(key):
+            diff[key] = {
+                'antes': before.get(key),
+                'despues': after.get(key),
+            }
+
+    return diff
+
+
 # ==================================================
 # HELPERS EXPORT (reportes)
 # ==================================================
@@ -225,9 +287,11 @@ def _get_rango_fechas_from_request(request):
     return desde, hasta
 
 
-def _build_report_queryset(desde, hasta, unidad_negocio=None):
+
+def _build_report_queryset(desde, hasta, unidad_negocio=None, categoria_recurrente=None):
     qs = (
-        PagoReal.objects.filter(fecha_pago__range=[desde, hasta])
+        PagoReal.objects
+        .filter(fecha_pago__range=[desde, hasta], pago__activo=True)
         .select_related('pago')
         .order_by('fecha_pago', 'id')
     )
@@ -235,6 +299,10 @@ def _build_report_queryset(desde, hasta, unidad_negocio=None):
     unidad_negocio = (unidad_negocio or '').strip()
     if unidad_negocio:
         qs = qs.filter(pago__unidad_negocio=unidad_negocio)
+
+    categoria_recurrente = (categoria_recurrente or '').strip()
+    if categoria_recurrente:
+        qs = qs.filter(_categoria_recurrente_pago_q(categoria_recurrente))
 
     return qs
 
@@ -254,6 +322,176 @@ def _get_unidad_label_from_pago_obj(pago_obj):
 def _get_unidades_negocio_disponibles_reportes():
     return PagoProgramado.unidades_negocio_disponibles()
 
+
+def _get_categorias_recurrentes_disponibles_reportes():
+    return PagoProgramado.categorias_recurrentes_disponibles()
+
+
+def _categoria_recurrente_pago_q(categoria_codigo):
+    categoria_codigo = (categoria_codigo or '').strip()
+    if not categoria_codigo:
+        return Q()
+    return Q(pago__categoria_recurrente_ref__codigo=categoria_codigo) | Q(pago__categoria_recurrente=categoria_codigo)
+
+
+def _categoria_recurrente_compromiso_q(categoria_codigo):
+    categoria_codigo = (categoria_codigo or '').strip()
+    if not categoria_codigo:
+        return Q()
+    return Q(categoria_recurrente_ref__codigo=categoria_codigo) | Q(categoria_recurrente=categoria_codigo)
+
+
+def _build_proyeccion_eventos_queryset(fecha_hasta, unidad_negocio=None, categoria_recurrente=None):
+    hoy = timezone.localdate()
+    qs = (
+        EventoPago.objects
+        .filter(estado='pendiente', pago__activo=True, fecha__gte=hoy, fecha__lte=fecha_hasta)
+        .select_related('pago')
+        .order_by('fecha', 'id')
+    )
+
+    unidad_negocio = (unidad_negocio or '').strip()
+    if unidad_negocio:
+        qs = qs.filter(pago__unidad_negocio=unidad_negocio)
+
+    categoria_recurrente = (categoria_recurrente or '').strip()
+    if categoria_recurrente:
+        qs = qs.filter(_categoria_recurrente_pago_q(categoria_recurrente))
+
+    return qs
+
+
+def _build_proyeccion_tabla_desde_eventos(eventos_qs):
+    tabla = []
+    acumulado = Decimal('0.00')
+
+    for evento in eventos_qs:
+        pago = getattr(evento, 'pago', None)
+        monto = Decimal(evento.monto or 0)
+        acumulado += monto
+
+        categoria_codigo = ''
+        categoria_label = ''
+        modo_programacion = 'CUOTAS'
+        if pago:
+            try:
+                categoria_codigo = pago.categoria_recurrente_codigo_actual() if hasattr(pago, 'categoria_recurrente_codigo_actual') else (getattr(pago, 'categoria_recurrente', '') or '')
+            except Exception:
+                categoria_codigo = getattr(pago, 'categoria_recurrente', '') or ''
+            try:
+                categoria_label = pago.categoria_recurrente_label_actual() if hasattr(pago, 'categoria_recurrente_label_actual') else ''
+            except Exception:
+                categoria_label = categoria_codigo.replace('_', ' ').title() if categoria_codigo else ''
+            try:
+                modo_programacion = (getattr(pago, 'modo_programacion', 'CUOTAS') or 'CUOTAS').strip().upper()
+            except Exception:
+                modo_programacion = 'CUOTAS'
+
+        tabla.append({
+            'fecha': evento.fecha,
+            'nombre': pago.nombre if pago else '—',
+            'pago_id': getattr(pago, 'id', None) if pago else None,
+            'modo_programacion': modo_programacion,
+            'unidad_negocio': pago.unidad_negocio_codigo_actual() if pago and hasattr(pago, 'unidad_negocio_codigo_actual') else (getattr(pago, 'unidad_negocio', None) or 'otros'),
+            'unidad_negocio_label': pago.unidad_negocio_label_actual() if pago and hasattr(pago, 'unidad_negocio_label_actual') else 'Otros',
+            'categoria_recurrente': categoria_codigo,
+            'categoria_recurrente_label': categoria_label,
+            'monto': monto,
+            'acumulado': acumulado,
+        })
+
+    return tabla
+
+def _proyeccion_json_desde_tabla(tabla):
+    return json.dumps({
+        'labels': [item['fecha'].strftime('%Y-%m-%d') for item in tabla],
+        'valores': [float(item['monto']) for item in tabla],
+        'acumulado': [float(item['acumulado']) for item in tabla],
+    })
+
+
+def _resumen_proyeccion_desde_tabla(tabla):
+    total = sum((item['monto'] for item in tabla), Decimal('0.00'))
+    cantidad = len(tabla)
+    mayor_dia = max(tabla, key=lambda x: x['monto'], default=None)
+    return {
+        'total_proyectado': total,
+        'cantidad_eventos': cantidad,
+        'promedio': (total / cantidad) if cantidad else Decimal('0.00'),
+        'mayor_dia': mayor_dia,
+    }
+
+
+def _analisis_proyeccion_desde_tabla(tabla):
+    total_recurrentes = Decimal('0.00')
+    total_cuotas = Decimal('0.00')
+    total_unicos = Decimal('0.00')
+    cantidad_recurrentes = 0
+    cantidad_cuotas = 0
+    cantidad_unicos = 0
+    categorias = {}
+    unidades = {}
+    primer_evento_por_compromiso = {}
+
+    for item in tabla:
+        nombre = item.get('nombre') or '—'
+        pago_id = item.get('pago_id')
+        monto = Decimal(item.get('monto') or 0)
+        categoria = item.get('categoria_recurrente') or 'OTRO'
+        categoria_label = item.get('categoria_recurrente_label') or 'Otro'
+        unidad = item.get('unidad_negocio') or 'otros'
+        unidad_label = item.get('unidad_negocio_label') or 'Otros'
+        modo_programacion = str(item.get('modo_programacion') or 'CUOTAS').strip().upper()
+
+        if modo_programacion == 'RECURRENTE':
+            total_recurrentes += monto
+            cantidad_recurrentes += 1
+
+            cat = categorias.setdefault(categoria, {
+                'categoria': categoria,
+                'categoria_label': categoria_label,
+                'total': Decimal('0.00'),
+                'cantidad_eventos': 0,
+            })
+            cat['total'] += monto
+            cat['cantidad_eventos'] += 1
+
+            uni = unidades.setdefault(unidad, {
+                'unidad_negocio': unidad,
+                'unidad_negocio_label': unidad_label,
+                'total_recurrente': Decimal('0.00'),
+                'cantidad_eventos': 0,
+            })
+            uni['total_recurrente'] += monto
+            uni['cantidad_eventos'] += 1
+
+            clave_compromiso = pago_id if pago_id is not None else nombre
+            if clave_compromiso not in primer_evento_por_compromiso:
+                primer_evento_por_compromiso[clave_compromiso] = monto
+
+        elif modo_programacion == 'UNICO':
+            total_unicos += monto
+            cantidad_unicos += 1
+
+        else:
+            total_cuotas += monto
+            cantidad_cuotas += 1
+
+    categorias_ordenadas = sorted(categorias.values(), key=lambda x: (-x['total'], x['categoria_label'].lower()))
+    unidades_ordenadas = sorted(unidades.values(), key=lambda x: (-x['total_recurrente'], x['unidad_negocio_label'].lower()))
+
+    return {
+        'total_proyeccion': total_recurrentes + total_cuotas + total_unicos,
+        'total_recurrentes': total_recurrentes,
+        'total_cuotas': total_cuotas,
+        'total_unicos': total_unicos,
+        'cantidad_recurrentes': cantidad_recurrentes,
+        'cantidad_cuotas': cantidad_cuotas,
+        'cantidad_unicos': cantidad_unicos,
+        'carga_recurrente_mensual_estimada': sum(primer_evento_por_compromiso.values(), Decimal('0.00')),
+        'categorias': categorias_ordenadas,
+        'unidades': unidades_ordenadas,
+    }
 
 def _resumen_pagos_por_unidad(pagos_qs):
     filas = list(
@@ -1036,6 +1274,20 @@ def _normalizar_tipo_programado_excel(tipo_excel, tipo_pago_excel):
     return "unico"
 
 
+def _normalizar_modo_programacion_excel(tipo_excel, tipo_pago_excel, total_cuotas):
+    t1 = str(tipo_excel or "").strip().lower()
+    t2 = str(tipo_pago_excel or "").strip().lower()
+    combinado = f"{t1} {t2}"
+
+    if total_cuotas and total_cuotas > 1:
+        return 'CUOTAS'
+
+    if 'mensual' in combinado or 'recurrente' in combinado:
+        return 'RECURRENTE'
+
+    return 'UNICO'
+
+
 def _normalizar_frecuencia_excel(tipo_pago_excel, total_cuotas):
     t = str(tipo_pago_excel or "").strip().lower()
 
@@ -1225,6 +1477,7 @@ def _construir_preview_importacion(rows, crear_pagos_reales):
                 cuotas_restantes = 1
 
             tipo_programado = _normalizar_tipo_programado_excel(tipo_excel, tipo_pago_excel)
+            modo_programacion = _normalizar_modo_programacion_excel(tipo_excel, tipo_pago_excel, total_cuotas)
             frecuencia = _normalizar_frecuencia_excel(tipo_pago_excel, total_cuotas)
             debt_key = _debt_preview_key(nombre, fecha_inicio, monto, total_cuotas)
 
@@ -1254,27 +1507,30 @@ def _construir_preview_importacion(rows, crear_pagos_reales):
             payment_key = None
 
             if crear_pagos_reales and pagado > 0:
-                payment_key = _payment_preview_key(debt_key, fecha_inicio, pagado)
-
-                pago_existente = None
-                if deuda_existente:
-                    pago_existente = PagoReal.objects.filter(
-                        pago=deuda_existente,
-                        fecha_pago=fecha_inicio,
-                        monto=pagado,
-                    ).first()
-
-                if pago_existente:
-                    estado_pago = 'Existente BD'
-                    resumen['pagos_existentes'] += 1
+                if modo_programacion == 'CUOTAS':
+                    estado_pago = 'No crear (cuotas)'
                 else:
-                    if payment_key in payment_keys_nuevos:
-                        estado_pago = 'Repetido en archivo'
+                    payment_key = _payment_preview_key(debt_key, fecha_inicio, pagado)
+
+                    pago_existente = None
+                    if deuda_existente:
+                        pago_existente = PagoReal.objects.filter(
+                            pago=deuda_existente,
+                            fecha_pago=fecha_inicio,
+                            monto=pagado,
+                        ).first()
+
+                    if pago_existente:
+                        estado_pago = 'Existente BD'
+                        resumen['pagos_existentes'] += 1
                     else:
-                        payment_keys_nuevos.add(payment_key)
-                        estado_pago = 'Nuevo'
-                        crear_pago = True
-                        resumen['pagos_nuevos'] += 1
+                        if payment_key in payment_keys_nuevos:
+                            estado_pago = 'Repetido en archivo'
+                        else:
+                            payment_keys_nuevos.add(payment_key)
+                            estado_pago = 'Nuevo'
+                            crear_pago = True
+                            resumen['pagos_nuevos'] += 1
 
             descripcion_importada = _build_descripcion_importada(
                 id_deuda=id_deuda,
@@ -1296,6 +1552,7 @@ def _construir_preview_importacion(rows, crear_pagos_reales):
                 'tipo_excel': tipo_excel,
                 'tipo_pago_excel': tipo_pago_excel,
                 'tipo_programado': tipo_programado,
+                'modo_programacion': modo_programacion,
                 'frecuencia': frecuencia,
                 'total_cuotas': total_cuotas,
                 'cuotas_restantes': cuotas_restantes,
@@ -1376,6 +1633,8 @@ def dashboard_financiero(request):
     pagos = listar_compromisos_financieros(include_pagados=True)
     resumen_estados = resumen_estados_compromisos()
     resumen_unidades = resumen_compromisos_por_unidad(pagos)
+    resumen_categorias_recurrentes = resumen_recurrentes_por_categoria(pagos)
+    resumen_unidad_categoria = resumen_recurrentes_por_unidad_categoria(pagos)
 
     contexto = {
         'kpis': kpis,
@@ -1390,6 +1649,8 @@ def dashboard_financiero(request):
         'pagos': pagos,
         'resumen_estados': resumen_estados,
         'resumen_unidades': resumen_unidades,
+        'resumen_categorias_recurrentes': resumen_categorias_recurrentes,
+        'resumen_unidad_categoria': resumen_unidad_categoria,
     }
 
     return _render_view(request, 'pagos/dashboard.html', contexto)
@@ -1445,8 +1706,6 @@ def enviar_alerta_urgente_email(request):
 # LISTADO DE CUENTAS POR PAGAR
 # ==================================================
 
-@staff_member_required
-
 
 def _fmt_clp_export(value):
     try:
@@ -1490,10 +1749,29 @@ def _pagos_lista_export_querystring(request):
     params = request.GET.copy()
     params.pop('export', None)
     params.pop('page', None)
+    params.pop('selected_ids', None)
     return params.urlencode()
 
 
-def _pagos_lista_filter_labels(*, q, unidad_negocio, tipo, estado_raw, activo_raw, ver_pagados):
+def _pagos_lista_selected_ids_from_request(request):
+    raw = (request.GET.get('selected_ids') or '').strip()
+    if not raw:
+        return []
+
+    ids = []
+    seen = set()
+    for part in re.split(r'[\s,;]+', raw):
+        if not part or not part.isdigit():
+            continue
+        value = int(part)
+        if value <= 0 or value in seen:
+            continue
+        seen.add(value)
+        ids.append(value)
+    return ids
+
+
+def _pagos_lista_filter_labels(*, q, unidad_negocio, tipo, categoria_recurrente, estado_raw, activo_raw, ver_pagados, seleccionados=0):
     tipos_map = {value: label for value, label in PagoProgramado.TIPO_CHOICES}
     estados_map = {
         'pendiente': 'Pendiente',
@@ -1509,10 +1787,17 @@ def _pagos_lista_filter_labels(*, q, unidad_negocio, tipo, estado_raw, activo_ra
         'q': q or '—',
         'unidad_negocio': unidad_negocio_label_from_codigo(unidad_negocio) if unidad_negocio else 'Todas',
         'tipo': tipos_map.get(tipo, 'Todos') if tipo else 'Todos',
+        'categoria_recurrente': next((c['label'] for c in PagoProgramado.categorias_recurrentes_disponibles(incluir_inactivas=True) if c['value'] == categoria_recurrente), 'Todas') if categoria_recurrente else 'Todas',
         'estado': estados_map.get((estado_raw or '').lower(), 'Todos') if estado_raw else 'Todos',
         'activo': activo_map.get(activo_raw, 'Todos') if activo_raw else 'Todos',
         'ver_pagados': 'Sí' if ver_pagados else 'No',
+        'seleccionados': int(seleccionados or 0),
     }
+
+
+def _pagos_lista_next_url(request):
+    next_url = (request.POST.get('next') or request.GET.get('next') or '').strip()
+    return next_url or 'pagos_lista'
 
 
 def _export_pagos_lista_csv(pagos, filtros_labels):
@@ -1529,22 +1814,27 @@ def _export_pagos_lista_csv(pagos, filtros_labels):
     writer.writerow(['Búsqueda', filtros_labels['q']])
     writer.writerow(['Unidad / lugar', filtros_labels['unidad_negocio']])
     writer.writerow(['Tipo', filtros_labels['tipo']])
+    writer.writerow(['Categoría recurrente', filtros_labels['categoria_recurrente']])
     writer.writerow(['Estado', filtros_labels['estado']])
     writer.writerow(['Activo', filtros_labels['activo']])
     writer.writerow(['Ver pagados', filtros_labels['ver_pagados']])
     writer.writerow(['Total registros', len(pagos)])
+    writer.writerow(['Seleccionados', filtros_labels.get('seleccionados', 0)])
     writer.writerow([])
 
     writer.writerow([
         'Fecha inicio',
         'Concepto',
         'Unidad',
+        'Cuotas totales',
+        'Cuotas pendientes',
+        'Resumen cuotas',
         'Cuota actual',
         'Abonado cuota',
         'Saldo cuota',
         'Fecha cuota',
         'Estado cuota',
-        'Saldo deuda',
+        'Saldo visible',
         'Progreso',
     ])
 
@@ -1553,6 +1843,9 @@ def _export_pagos_lista_csv(pagos, filtros_labels):
             _fmt_date_export(p.get('fecha_inicio')),
             p.get('nombre', ''),
             p.get('unidad_negocio_label') or p.get('unidad_negocio') or 'Otros',
+            p.get('cuotas_totales', ''),
+            p.get('cuotas_pendientes', ''),
+            p.get('resumen_cuotas', ''),
             _fmt_clp_export(p.get('cuota_actual')),
             _fmt_clp_export(p.get('abonado_cuota')),
             _fmt_clp_export(p.get('saldo_cuota')),
@@ -1583,10 +1876,12 @@ def _export_pagos_lista_xlsx(pagos, filtros_labels):
         ('Búsqueda', filtros_labels['q']),
         ('Unidad / lugar', filtros_labels['unidad_negocio']),
         ('Tipo', filtros_labels['tipo']),
+        ('Categoría recurrente', filtros_labels['categoria_recurrente']),
         ('Estado', filtros_labels['estado']),
         ('Activo', filtros_labels['activo']),
         ('Ver pagados', filtros_labels['ver_pagados']),
         ('Total registros', len(pagos)),
+        ('Seleccionados', filtros_labels.get('seleccionados', 0)),
     ]
 
     start_filters = 3
@@ -1599,12 +1894,15 @@ def _export_pagos_lista_xlsx(pagos, filtros_labels):
         'Fecha inicio',
         'Concepto',
         'Unidad',
+        'Cuotas totales',
+        'Cuotas pendientes',
+        'Resumen cuotas',
         'Cuota actual',
         'Abonado cuota',
         'Saldo cuota',
         'Fecha cuota',
         'Estado cuota',
-        'Saldo deuda',
+        'Saldo visible',
         'Progreso',
     ]
 
@@ -1622,20 +1920,25 @@ def _export_pagos_lista_xlsx(pagos, filtros_labels):
         ws.cell(row=row_idx, column=1, value=_fmt_date_export(p.get('fecha_inicio')))
         ws.cell(row=row_idx, column=2, value=p.get('nombre', ''))
         ws.cell(row=row_idx, column=3, value=p.get('unidad_negocio_label') or p.get('unidad_negocio') or 'Otros')
-        ws.cell(row=row_idx, column=4, value=float(Decimal(str(p.get('cuota_actual') or 0))))
-        ws.cell(row=row_idx, column=5, value=float(Decimal(str(p.get('abonado_cuota') or 0))))
-        ws.cell(row=row_idx, column=6, value=float(Decimal(str(p.get('saldo_cuota') or 0))))
-        ws.cell(row=row_idx, column=7, value=_fmt_date_export(p.get('fecha_cuota_actual')))
-        ws.cell(row=row_idx, column=8, value=p.get('estado_cuota', ''))
-        ws.cell(row=row_idx, column=9, value=float(Decimal(str(p.get('saldo_deuda') or 0))))
-        ws.cell(row=row_idx, column=10, value=float(Decimal(str(p.get('porcentaje') or 0))))
+        ws.cell(row=row_idx, column=4, value=p.get('cuotas_totales') if p.get('cuotas_totales') not in (None, '') else '')
+        ws.cell(row=row_idx, column=5, value=p.get('cuotas_pendientes') if p.get('cuotas_pendientes') not in (None, '') else '')
+        ws.cell(row=row_idx, column=6, value=p.get('resumen_cuotas', ''))
+        ws.cell(row=row_idx, column=7, value=float(Decimal(str(p.get('cuota_actual') or 0))))
+        ws.cell(row=row_idx, column=8, value=float(Decimal(str(p.get('abonado_cuota') or 0))))
+        ws.cell(row=row_idx, column=9, value=float(Decimal(str(p.get('saldo_cuota') or 0))))
+        ws.cell(row=row_idx, column=10, value=_fmt_date_export(p.get('fecha_cuota_actual')))
+        ws.cell(row=row_idx, column=11, value=p.get('estado_cuota', ''))
+        ws.cell(row=row_idx, column=12, value=float(Decimal(str(p.get('saldo_deuda') or 0))))
+        ws.cell(row=row_idx, column=13, value=float(Decimal(str(p.get('porcentaje') or 0))))
 
     for row_idx in range(data_start, data_start + len(pagos)):
-        for col_idx in (4, 5, 6, 9):
+        for col_idx in (4, 5):
+            ws.cell(row=row_idx, column=col_idx).number_format = '0'
+        for col_idx in (7, 8, 9, 12):
             ws.cell(row=row_idx, column=col_idx).number_format = '#,##0'
-        ws.cell(row=row_idx, column=10).number_format = '0.00'
+        ws.cell(row=row_idx, column=13).number_format = '0.00'
 
-    widths = [14, 32, 22, 14, 16, 14, 14, 16, 14, 12]
+    widths = [14, 32, 22, 14, 16, 16, 14, 16, 14, 14, 16, 14, 12]
     for idx, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(idx)].width = width
 
@@ -1664,13 +1967,17 @@ def _export_pagos_lista_pdf(pagos, filtros_labels):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(A4),
-        leftMargin=20,
-        rightMargin=20,
+        leftMargin=18,
+        rightMargin=18,
         topMargin=20,
         bottomMargin=20,
     )
 
     styles = getSampleStyleSheet()
+    body_style = styles['BodyText']
+    body_style.fontSize = 7
+    body_style.leading = 8
+
     story = []
 
     story.append(Paragraph('<b>Cuentas por pagar</b>', styles['Title']))
@@ -1678,7 +1985,7 @@ def _export_pagos_lista_pdf(pagos, filtros_labels):
     story.append(Paragraph(
         (
             f"<b>Generado:</b> {timezone.localtime().strftime('%d-%m-%Y %H:%M')} &nbsp;&nbsp;&nbsp; "
-            f"<b>Registros:</b> {len(pagos)}"
+            f"<b>Registros:</b> {len(pagos)} &nbsp;&nbsp;&nbsp; <b>Seleccionados:</b> {filtros_labels.get('seleccionados', 0)}"
         ),
         styles['Normal']
     ))
@@ -1686,7 +1993,8 @@ def _export_pagos_lista_pdf(pagos, filtros_labels):
         (
             f"<b>Búsqueda:</b> {filtros_labels['q']} &nbsp;&nbsp;&nbsp; "
             f"<b>Unidad:</b> {filtros_labels['unidad_negocio']} &nbsp;&nbsp;&nbsp; "
-            f"<b>Tipo:</b> {filtros_labels['tipo']}"
+            f"<b>Tipo:</b> {filtros_labels['tipo']} &nbsp;&nbsp;&nbsp; "
+            f"<b>Categoría:</b> {filtros_labels['categoria_recurrente']}"
         ),
         styles['Normal']
     ))
@@ -1704,21 +2012,27 @@ def _export_pagos_lista_pdf(pagos, filtros_labels):
         'Fecha inicio',
         'Concepto',
         'Unidad',
+        'Tot.',
+        'Pend.',
+        'Cuotas',
         'Cuota actual',
-        'Abonado cuota',
+        'Abonado',
         'Saldo cuota',
         'Fecha cuota',
         'Estado cuota',
-        'Saldo deuda',
-        'Progreso',
+        'Saldo visible',
+        'Prog.',
     ]]
 
     if pagos:
         for p in pagos:
             data.append([
                 _fmt_date_export(p.get('fecha_inicio')),
-                Paragraph(str(p.get('nombre', '')), styles['BodyText']),
-                Paragraph(str(p.get('unidad_negocio_label') or p.get('unidad_negocio') or 'Otros'), styles['BodyText']),
+                Paragraph(str(p.get('nombre', '')), body_style),
+                Paragraph(str(p.get('unidad_negocio_label') or p.get('unidad_negocio') or 'Otros'), body_style),
+                str(p.get('cuotas_totales', '') or ''),
+                str(p.get('cuotas_pendientes', '') or ''),
+                str(p.get('resumen_cuotas', '') or ''),
                 _fmt_clp_export(p.get('cuota_actual')),
                 _fmt_clp_export(p.get('abonado_cuota')),
                 _fmt_clp_export(p.get('saldo_cuota')),
@@ -1728,21 +2042,23 @@ def _export_pagos_lista_pdf(pagos, filtros_labels):
                 _fmt_pct_export(p.get('porcentaje')),
             ])
     else:
-        data.append(['—', 'Sin registros', '—', '—', '—', '—', '—', '—', '—', '—'])
+        data.append(['—', 'Sin registros', '—', '—', '—', '—', '—', '—', '—', '—', '—', '—', '—'])
 
     table = Table(
         data,
         repeatRows=1,
-        colWidths=[62, 165, 95, 72, 78, 72, 68, 78, 78, 55],
+        colWidths=[48, 118, 74, 34, 38, 44, 58, 58, 58, 52, 58, 60, 38],
     )
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#111827')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('LEADING', (0, 0), (-1, -1), 8),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN', (3, 1), (5, -1), 'RIGHT'),
-        ('ALIGN', (8, 1), (9, -1), 'RIGHT'),
+        ('ALIGN', (3, 1), (5, -1), 'CENTER'),
+        ('ALIGN', (6, 1), (8, -1), 'RIGHT'),
+        ('ALIGN', (11, 1), (12, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.25, colors.lightgrey),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
     ]))
@@ -1764,17 +2080,20 @@ def pagos_lista(request):
     q = (request.GET.get('q') or '').strip()
     unidad_negocio = (request.GET.get('unidad_negocio') or '').strip()
     tipo = (request.GET.get('tipo') or '').strip()
+    filtro_categoria_recurrente = (request.GET.get('categoria_recurrente') or '').strip()
     estado_raw = (request.GET.get('estado') or '').strip().lower()
     estado = estado_raw.upper()
-    activo_raw = (request.GET.get('activo') or '').strip().lower()
+    activo_raw = (request.GET.get('activo') or '1').strip().lower()
     ver_pagados = (request.GET.get('ver_pagados') or '').strip() == '1'
     export = (request.GET.get('export') or '').strip().lower()
+    selected_ids = _pagos_lista_selected_ids_from_request(request)
+    selected_ids_set = set(selected_ids)
 
-    activo = None
-    if activo_raw == '1':
-        activo = True
-    elif activo_raw == '0':
+    if activo_raw == '0':
         activo = False
+    else:
+        activo = True
+        activo_raw = '1'
 
     pagos_base = listar_compromisos_financieros(
         include_pagados=ver_pagados,
@@ -1790,44 +2109,113 @@ def pagos_lista(request):
             if (item.get('unidad_negocio') or 'otros') == unidad_negocio
         ]
 
+    if filtro_categoria_recurrente:
+        pagos_base = [
+            item for item in pagos_base
+            if (item.get('categoria_recurrente') or '') == filtro_categoria_recurrente
+        ]
+
+    pagos_ids = [item['id'] for item in pagos_base]
+    pagos_con_pagos_reales = set(
+        PagoProgramado.objects
+        .filter(id__in=pagos_ids)
+        .filter(pagos_realizados__isnull=False)
+        .values_list('id', flat=True)
+        .distinct()
+    )
+
     pagos = []
     for item in pagos_base:
+        modo_programacion = item.get('modo_programacion') or 'CUOTAS'
+        item_categoria_recurrente = item.get('categoria_recurrente') or ''
+        item_categoria_recurrente_label = item.get('categoria_recurrente_label') or ''
+
+        if modo_programacion == 'RECURRENTE':
+            cuotas_totales = ''
+            cuotas_pendientes = ''
+            resumen_cuotas = item_categoria_recurrente_label or 'Recurrente'
+        elif modo_programacion == 'UNICO':
+            cuotas_totales = ''
+            cuotas_pendientes = ''
+            resumen_cuotas = 'Único'
+        else:
+            cuotas_totales = item.get('total_cuotas')
+            cuotas_pendientes = item.get('cuotas_restantes')
+            resumen_cuotas = (
+                f"{cuotas_pendientes}/{cuotas_totales}"
+                if cuotas_totales not in (None, '') and cuotas_pendientes not in (None, '')
+                else ''
+            )
+
+        puede_eliminar_definitivo = item['id'] not in pagos_con_pagos_reales
+
+        cuota_actual_valor = item.get('monto_cuota_actual', Decimal('0.00'))
+        abonado_cuota_valor = item.get('abonado_cuota_actual', Decimal('0.00'))
+        saldo_cuota_valor = item.get('saldo_cuota_actual', Decimal('0.00'))
+        saldo_visible_valor = item.get('saldo_visible', item.get('saldo_real', Decimal('0.00')))
+
         pagos.append({
             'id': item['id'],
+            'seleccionado': item['id'] in selected_ids_set,
             'fecha_inicio': item['fecha_inicio'],
             'nombre': item['nombre'],
             'tipo': item['tipo'],
+            'modo_programacion': item.get('modo_programacion') or 'CUOTAS',
+            'modo_programacion_label': item.get('modo_programacion_label') or 'En cuotas',
+            'categoria_recurrente': item_categoria_recurrente,
+            'categoria_recurrente_label': item_categoria_recurrente_label,
             'unidad_negocio': item.get('unidad_negocio') or 'otros',
             'unidad_negocio_label': item.get('unidad_negocio_label') or 'Otros',
-            'cuotas': item.get('total_cuotas'),
-            'cuota_actual': item.get('monto_cuota_actual', Decimal('0.00')),
-            'abonado_cuota': item.get('abonado_cuota_actual', Decimal('0.00')),
-            'saldo_cuota': item.get('saldo_cuota_actual', Decimal('0.00')),
+            'cuotas': cuotas_totales,
+            'cuotas_totales': cuotas_totales,
+            'cuotas_pendientes': cuotas_pendientes,
+            'resumen_cuotas': resumen_cuotas,
+            'cuota_actual': cuota_actual_valor,
+            'cuota_actual_valor': cuota_actual_valor,
+            'abonado_cuota': abonado_cuota_valor,
+            'abonado_cuota_valor': abonado_cuota_valor,
+            'saldo_cuota': saldo_cuota_valor,
+            'saldo_cuota_valor': saldo_cuota_valor,
             'fecha_cuota_actual': item.get('fecha_cuota_actual'),
             'estado_cuota': item.get('estado_cuota_actual', 'Pendiente'),
             'estado_cuota_clase': item.get('estado_cuota_clase', 'danger'),
             'cuota_actual_label': item.get('cuota_actual_label', '1/1'),
-            'saldo_deuda': item.get('saldo_real', Decimal('0.00')),
+            'saldo_deuda': saldo_visible_valor,
+            'saldo_deuda_valor': saldo_visible_valor,
+            'saldo_visible': saldo_visible_valor,
+            'saldo_visible_valor': saldo_visible_valor,
+            'saldo_deuda_label': item.get('saldo_visible_label', 'Saldo total pendiente'),
+            'proyeccion_horizonte': item.get('proyeccion_horizonte', item.get('saldo_real', Decimal('0.00'))),
+            'proyeccion_horizonte_label': item.get('proyeccion_horizonte_label', 'Saldo total pendiente'),
+            'es_recurrente': bool(item.get('es_recurrente')),
+            'es_unico': bool(item.get('es_unico')),
             'estado': item['estado_real'],
-            'porcentaje': item['porcentaje_pagado'],
+            'porcentaje': item.get('porcentaje_visible', item['porcentaje_pagado']),
             'activo': item['activo'],
+            'puede_eliminar_definitivo': puede_eliminar_definitivo,
+            'motivo_no_eliminar': '' if puede_eliminar_definitivo else 'No se puede eliminar porque tiene pagos reales asociados.',
         })
+
+    pagos_export = [p for p in pagos if p['id'] in selected_ids_set] if selected_ids_set else pagos
+    seleccionados_count = len(pagos_export) if selected_ids_set else 0
 
     filtros_labels = _pagos_lista_filter_labels(
         q=q,
         unidad_negocio=unidad_negocio,
         tipo=tipo,
+        categoria_recurrente=filtro_categoria_recurrente,
         estado_raw=estado_raw,
         activo_raw=activo_raw,
         ver_pagados=ver_pagados,
+        seleccionados=seleccionados_count,
     )
 
     if export == 'csv':
-        return _export_pagos_lista_csv(pagos, filtros_labels)
+        return _export_pagos_lista_csv(pagos_export, filtros_labels)
     if export == 'xlsx':
-        return _export_pagos_lista_xlsx(pagos, filtros_labels)
+        return _export_pagos_lista_xlsx(pagos_export, filtros_labels)
     if export == 'pdf':
-        return _export_pagos_lista_pdf(pagos, filtros_labels)
+        return _export_pagos_lista_pdf(pagos_export, filtros_labels)
 
     resumen_operativo = {
         'total': len(pagos),
@@ -1857,15 +2245,18 @@ def pagos_lista(request):
     ]
 
     unidades_negocio_disponibles = PagoProgramado.unidades_negocio_disponibles()
+    categorias_recurrentes_disponibles = PagoProgramado.categorias_recurrentes_disponibles()
 
     contexto = {
         'pagos': pagos,
         'tipos_disponibles': tipos_disponibles,
         'unidades_negocio_disponibles': unidades_negocio_disponibles,
+        'categorias_recurrentes_disponibles': categorias_recurrentes_disponibles,
         'filtros': {
             'q': q,
             'unidad_negocio': unidad_negocio,
             'tipo': tipo,
+            'categoria_recurrente': filtro_categoria_recurrente,
             'estado': estado_raw,
             'activo': activo_raw,
             'ver_pagados': ver_pagados,
@@ -1873,6 +2264,7 @@ def pagos_lista(request):
         'resumen_operativo': resumen_operativo,
         'resumen_monetario': resumen_monetario,
         'export_querystring': _pagos_lista_export_querystring(request),
+        'selected_ids_csv': ','.join(str(v) for v in selected_ids),
     }
 
     return _render_view(request, 'pagos/pagos_lista.html', contexto)
@@ -1887,8 +2279,18 @@ def pagos_crear(request):
     if request.method == 'POST':
         form = PagoProgramadoForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Pago registrado correctamente.')
+            pago = form.save()
+            _registrar_auditoria(
+                request,
+                accion='crear',
+                modulo='Cuentas por pagar',
+                objeto=pago,
+                descripcion='Creación de compromiso financiero.',
+                antes={},
+                despues=snapshot_instancia_auditoria(pago),
+                es_critico=True,
+            )
+            messages.success(request, 'Compromiso registrado correctamente.')
             return redirect('pagos_lista')
         messages.error(request, 'Revisa el formulario, hay campos inválidos.')
     else:
@@ -1898,6 +2300,7 @@ def pagos_crear(request):
         'form': form,
         'titulo': 'Nuevo compromiso / deuda',
         'modo_edicion': False,
+        'soporta_recurrentes': True,
     })
 
 
@@ -1906,16 +2309,27 @@ def pagos_editar(request, pk):
     pago = get_object_or_404(PagoProgramado, pk=pk)
 
     if request.method == 'POST':
+        antes = snapshot_instancia_auditoria(pago)
         form = PagoProgramadoForm(request.POST, instance=pago)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Deuda actualizada correctamente.')
+            pago = form.save()
+            _registrar_auditoria(
+                request,
+                accion='editar',
+                modulo='Cuentas por pagar',
+                objeto=pago,
+                descripcion='Edición de compromiso financiero.',
+                antes=antes,
+                despues=snapshot_instancia_auditoria(pago),
+                es_critico=True,
+            )
+            messages.success(request, 'Compromiso actualizado correctamente.')
 
             if pago.pagos_realizados.exists() or pago.eventos.exists():
                 messages.warning(
                     request,
-                    'Ojo: esta deuda ya tiene pagos o eventos asociados. '
-                    'Si cambiaste monto, cuotas o frecuencia, revisa saldos y proyecciones.'
+                    'Ojo: este compromiso ya tiene pagos o eventos asociados. '
+                    'Si cambiaste monto, fecha, frecuencia o programación, revisa saldos y proyecciones.'
                 )
 
             return redirect('pagos_lista')
@@ -1927,8 +2341,8 @@ def pagos_editar(request, pk):
         if pago.pagos_realizados.exists() or pago.eventos.exists():
             messages.info(
                 request,
-                'Esta deuda ya tiene pagos o eventos asociados. '
-                'Edita con cuidado monto, cuotas, fecha y frecuencia.'
+                'Este compromiso ya tiene pagos o eventos asociados. '
+                'Edita con cuidado monto, fechas y programación.'
             )
 
     return _render_view(request, 'pagos/pagos_form.html', {
@@ -1936,8 +2350,75 @@ def pagos_editar(request, pk):
         'titulo': f'Editar deuda: {pago.nombre}',
         'modo_edicion': True,
         'pago_obj': pago,
+        'soporta_recurrentes': True,
     })
 
+
+@staff_member_required
+def pagos_anular(request, pk):
+    if request.method != 'POST':
+        messages.error(request, 'La acción solicitada no es válida.')
+        return redirect('pagos_lista')
+
+    pago = get_object_or_404(PagoProgramado, pk=pk)
+    next_url = _pagos_lista_next_url(request)
+
+    if not pago.activo:
+        messages.info(request, f'La deuda "{pago.nombre}" ya estaba anulada.')
+        return redirect(next_url)
+
+    antes = snapshot_instancia_auditoria(pago)
+    motivo = (request.POST.get('motivo_anulacion') or '').strip()
+    pago.anular(user=request.user, motivo=motivo)
+    _registrar_auditoria(
+        request,
+        accion='anular',
+        modulo='Cuentas por pagar',
+        objeto=pago,
+        descripcion=f'Anulación de compromiso financiero. Motivo: {motivo or "sin motivo"}.',
+        antes=antes,
+        despues=snapshot_instancia_auditoria(pago),
+        es_critico=True,
+    )
+    messages.success(request, f'Deuda anulada correctamente: {pago.nombre}.')
+    return redirect(next_url)
+
+
+@staff_member_required
+def pagos_eliminar_definitivo(request, pk):
+    if request.method != 'POST':
+        messages.error(request, 'La acción solicitada no es válida.')
+        return redirect('pagos_lista')
+
+    pago = get_object_or_404(PagoProgramado, pk=pk)
+    next_url = _pagos_lista_next_url(request)
+
+    if not (request.user.is_superuser or request.user.has_perm('pagos.delete_pagoprogramado')):
+        messages.error(request, 'No tienes permisos para eliminar deudas definitivamente.')
+        return redirect(next_url)
+
+    if not pago.puede_eliminar_definitivo():
+        razones = pago.razones_bloqueo_eliminacion()
+        detalle = ' y '.join(razones) if razones else 'tiene historial asociado'
+        messages.error(request, f'No se puede eliminar definitivamente "{pago.nombre}" porque {detalle}. Usa anular en su lugar.')
+        return redirect(next_url)
+
+    antes = snapshot_instancia_auditoria(pago)
+    nombre = pago.nombre
+    pago.delete()
+    _registrar_auditoria(
+        request,
+        accion='eliminar',
+        modulo='Cuentas por pagar',
+        objeto=None,
+        modelo='PagoProgramado',
+        descripcion=f'Eliminación definitiva de compromiso financiero: {nombre}.',
+        antes=antes,
+        despues={},
+        es_critico=True,
+    )
+    messages.success(request, f'Deuda eliminada definitivamente: {nombre}.')
+    return redirect(next_url)
 
 
 @staff_member_required
@@ -1945,9 +2426,19 @@ def empresa_configuracion(request):
     empresa = EmpresaConfig.get_solo() or EmpresaConfig()
 
     if request.method == 'POST':
+        antes = snapshot_instancia_auditoria(empresa) if getattr(empresa, 'pk', None) else {}
         form = EmpresaConfigForm(request.POST, request.FILES, instance=empresa)
         if form.is_valid():
             empresa = form.save()
+            _registrar_auditoria(
+                request,
+                accion='editar' if antes else 'crear',
+                modulo='Configuración',
+                objeto=empresa,
+                descripcion='Actualización de configuración institucional de la empresa.',
+                antes=antes,
+                despues=snapshot_instancia_auditoria(empresa),
+            )
             messages.success(request, f'Datos de empresa guardados correctamente: {empresa.display_name}.')
             return redirect('empresa_configuracion')
         messages.error(request, 'Revisa el formulario de empresa, hay campos inválidos.')
@@ -1970,6 +2461,84 @@ def ayuda(request):
         'titulo': 'Ayuda del sistema',
     })
 
+
+@staff_member_required
+def auditoria_logs(request):
+    qs = RegistroAuditoria.objects.select_related('usuario').order_by('-creado', '-id')
+
+    q = (request.GET.get('q') or '').strip()
+    accion = (request.GET.get('accion') or '').strip()
+    modulo = (request.GET.get('modulo') or '').strip()
+    modelo = (request.GET.get('modelo') or '').strip()
+    usuario_id = (request.GET.get('usuario') or '').strip()
+    fecha_desde = (request.GET.get('fecha_desde') or '').strip()
+    fecha_hasta = (request.GET.get('fecha_hasta') or '').strip()
+
+    filtros_activos = any([
+        q,
+        accion,
+        modulo,
+        modelo,
+        usuario_id,
+        fecha_desde,
+        fecha_hasta,
+    ])
+
+    carga_reciente_por_defecto = False
+
+    if q:
+        qs = qs.filter(
+            Q(descripcion__icontains=q) |
+            Q(objeto_repr__icontains=q) |
+            Q(username_snapshot__icontains=q) |
+            Q(modelo__icontains=q) |
+            Q(modulo__icontains=q)
+        )
+
+    if accion:
+        qs = qs.filter(accion=accion)
+    if modulo:
+        qs = qs.filter(modulo=modulo)
+    if modelo:
+        qs = qs.filter(modelo=modelo)
+    if usuario_id.isdigit():
+        qs = qs.filter(usuario_id=int(usuario_id))
+
+    desde = parse_date(fecha_desde) if fecha_desde else None
+    hasta = parse_date(fecha_hasta) if fecha_hasta else None
+    if desde:
+        qs = qs.filter(creado__date__gte=desde)
+    if hasta:
+        qs = qs.filter(creado__date__lte=hasta)
+
+    paginator = Paginator(qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return _render_view(request, 'pagos/auditoria_logs.html', {
+        'titulo': 'Auditoría del sistema',
+        'logs': page_obj.object_list,
+        'page_obj': page_obj,
+        'acciones_disponibles': RegistroAuditoria.ACCION_CHOICES,
+        'modulos_disponibles': [m for m in RegistroAuditoria.objects.order_by('modulo').values_list('modulo', flat=True).distinct() if m],
+        'modelos_disponibles': [m for m in RegistroAuditoria.objects.order_by('modelo').values_list('modelo', flat=True).distinct() if m],
+        'usuarios_disponibles': list(
+            RegistroAuditoria.objects
+            .exclude(username_snapshot='')
+            .order_by('username_snapshot')
+            .values('usuario_id', 'username_snapshot')
+            .distinct()
+        ),
+        'filtros': {
+            'q': q,
+            'accion': accion,
+            'modulo': modulo,
+            'modelo': modelo,
+            'usuario': usuario_id,
+            'fecha_desde': fecha_desde,
+            'fecha_hasta': fecha_hasta,
+        },
+        'carga_reciente_por_defecto': carga_reciente_por_defecto,
+    })
 
 
 # ==================================================
@@ -2002,6 +2571,15 @@ def unidades_negocio_crear(request):
         form = UnidadNegocioForm(request.POST)
         if form.is_valid():
             unidad = form.save()
+            _registrar_auditoria(
+                request,
+                accion='crear',
+                modulo='Parametrización',
+                objeto=unidad,
+                descripcion='Creación de unidad de negocio.',
+                antes={},
+                despues=snapshot_instancia_auditoria(unidad),
+            )
             messages.success(request, f'Unidad creada correctamente: {unidad.nombre}.')
             return redirect('unidades_negocio_lista')
         messages.error(request, 'Revisa el formulario de unidad, hay campos inválidos.')
@@ -2019,9 +2597,19 @@ def unidades_negocio_editar(request, pk):
     unidad = get_object_or_404(UnidadNegocio, pk=pk)
 
     if request.method == 'POST':
+        antes = snapshot_instancia_auditoria(unidad)
         form = UnidadNegocioForm(request.POST, instance=unidad)
         if form.is_valid():
             unidad = form.save()
+            _registrar_auditoria(
+                request,
+                accion='editar',
+                modulo='Parametrización',
+                objeto=unidad,
+                descripcion='Edición de unidad de negocio.',
+                antes=antes,
+                despues=snapshot_instancia_auditoria(unidad),
+            )
             messages.success(request, f'Unidad actualizada correctamente: {unidad.nombre}.')
             return redirect('unidades_negocio_lista')
         messages.error(request, 'Revisa el formulario de unidad, hay campos inválidos.')
@@ -2041,10 +2629,20 @@ def unidades_negocio_toggle(request, pk):
         return redirect('unidades_negocio_lista')
 
     unidad = get_object_or_404(UnidadNegocio, pk=pk)
+    antes = snapshot_instancia_auditoria(unidad)
     unidad.activa = not unidad.activa
     unidad.save(update_fields=['activa', 'actualizado'])
 
     estado = 'activada' if unidad.activa else 'desactivada'
+    _registrar_auditoria(
+        request,
+        accion='activar' if unidad.activa else 'desactivar',
+        modulo='Parametrización',
+        objeto=unidad,
+        descripcion=f'Unidad de negocio {estado}.',
+        antes=antes,
+        despues=snapshot_instancia_auditoria(unidad),
+    )
     messages.success(request, f'Unidad {estado} correctamente: {unidad.nombre}.')
     return redirect('unidades_negocio_lista')
 
@@ -2065,10 +2663,162 @@ def unidades_negocio_eliminar(request, pk):
         )
         return redirect('unidades_negocio_lista')
 
+    antes = snapshot_instancia_auditoria(unidad)
     nombre = unidad.nombre
     unidad.delete()
+    _registrar_auditoria(
+        request,
+        accion='eliminar',
+        modulo='Parametrización',
+        objeto=None,
+        modelo='UnidadNegocio',
+        descripcion=f'Eliminación de unidad de negocio: {nombre}.',
+        antes=antes,
+        despues={},
+    )
     messages.success(request, f'Unidad eliminada correctamente: {nombre}.')
     return redirect('unidades_negocio_lista')
+
+
+
+# ==================================================
+# CATEGORÍAS RECURRENTES (CRUD)
+# ==================================================
+
+@staff_member_required
+def categorias_recurrentes_lista(request):
+    categorias = list(
+        CategoriaRecurrente.objects
+        .annotate(total_compromisos_count=Count('pagos_programados_categoria'))
+        .order_by('orden', 'nombre', 'id')
+    )
+
+    total_categorias = len(categorias)
+    total_activas = sum(1 for c in categorias if c.activa)
+    total_con_uso = sum(1 for c in categorias if (getattr(c, 'total_compromisos_count', 0) or 0) > 0)
+
+    return _render_view(request, 'pagos/categorias_recurrentes_lista.html', {
+        'categorias': categorias,
+        'total_categorias': total_categorias,
+        'total_activas': total_activas,
+        'total_con_uso': total_con_uso,
+    })
+
+
+@staff_member_required
+def categorias_recurrentes_crear(request):
+    if request.method == 'POST':
+        form = CategoriaRecurrenteForm(request.POST)
+        if form.is_valid():
+            categoria = form.save()
+            _registrar_auditoria(
+                request,
+                accion='crear',
+                modulo='Parametrización',
+                objeto=categoria,
+                descripcion='Creación de categoría recurrente.',
+                antes={},
+                despues=snapshot_instancia_auditoria(categoria),
+            )
+            messages.success(request, f'Categoría creada correctamente: {categoria.nombre}.')
+            return redirect('categorias_recurrentes_lista')
+        messages.error(request, 'Revisa el formulario de categoría, hay campos inválidos.')
+    else:
+        form = CategoriaRecurrenteForm()
+
+    return _render_view(request, 'pagos/categoria_recurrente_form.html', {
+        'form': form,
+        'titulo': 'Nueva categoría recurrente',
+    })
+
+
+@staff_member_required
+def categorias_recurrentes_editar(request, pk):
+    categoria = get_object_or_404(CategoriaRecurrente, pk=pk)
+
+    if request.method == 'POST':
+        antes = snapshot_instancia_auditoria(categoria)
+        form = CategoriaRecurrenteForm(request.POST, instance=categoria)
+        if form.is_valid():
+            categoria = form.save()
+            _registrar_auditoria(
+                request,
+                accion='editar',
+                modulo='Parametrización',
+                objeto=categoria,
+                descripcion='Edición de categoría recurrente.',
+                antes=antes,
+                despues=snapshot_instancia_auditoria(categoria),
+            )
+            messages.success(request, f'Categoría actualizada correctamente: {categoria.nombre}.')
+            return redirect('categorias_recurrentes_lista')
+        messages.error(request, 'Revisa el formulario de categoría, hay campos inválidos.')
+    else:
+        form = CategoriaRecurrenteForm(instance=categoria)
+
+    return _render_view(request, 'pagos/categoria_recurrente_form.html', {
+        'form': form,
+        'titulo': f'Editar categoría: {categoria.nombre}',
+        'categoria_obj': categoria,
+    })
+
+
+@staff_member_required
+def categorias_recurrentes_toggle(request, pk):
+    if request.method != 'POST':
+        return redirect('categorias_recurrentes_lista')
+
+    categoria = get_object_or_404(CategoriaRecurrente, pk=pk)
+    antes = snapshot_instancia_auditoria(categoria)
+    categoria.activa = not categoria.activa
+    categoria.save(update_fields=['activa', 'actualizado'])
+
+    estado = 'activada' if categoria.activa else 'desactivada'
+    _registrar_auditoria(
+        request,
+        accion='activar' if categoria.activa else 'desactivar',
+        modulo='Parametrización',
+        objeto=categoria,
+        descripcion=f'Categoría recurrente {estado}.',
+        antes=antes,
+        despues=snapshot_instancia_auditoria(categoria),
+    )
+    messages.success(request, f'Categoría {estado} correctamente: {categoria.nombre}.')
+    return redirect('categorias_recurrentes_lista')
+
+
+@staff_member_required
+def categorias_recurrentes_eliminar(request, pk):
+    if request.method != 'POST':
+        return redirect('categorias_recurrentes_lista')
+
+    categoria = get_object_or_404(CategoriaRecurrente, pk=pk)
+    asociados = categoria.pagos_programados_categoria.count()
+
+    if asociados > 0:
+        messages.error(
+            request,
+            f'No se puede eliminar la categoría "{categoria.nombre}" porque tiene {asociados} compromiso(s) asociado(s). '
+            f'Puedes desactivarla en vez de eliminarla.'
+        )
+        return redirect('categorias_recurrentes_lista')
+
+    antes = snapshot_instancia_auditoria(categoria)
+    nombre = categoria.nombre
+    categoria.delete()
+    _registrar_auditoria(
+        request,
+        accion='eliminar',
+        modulo='Parametrización',
+        objeto=None,
+        modelo='CategoriaRecurrente',
+        descripcion=f'Eliminación de categoría recurrente: {nombre}.',
+        antes=antes,
+        despues={},
+    )
+    messages.success(request, f'Categoría eliminada correctamente: {nombre}.')
+    return redirect('categorias_recurrentes_lista')
+
 
 # ==================================================
 # IMPORTACIÓN MASIVA EXCEL
@@ -2196,6 +2946,14 @@ def pagos_importar_excel_confirmar(request):
             total_cuotas = int(entry['total_cuotas'])
             cuotas_restantes = int(entry['cuotas_restantes'])
             tipo_programado = entry['tipo_programado']
+            modo_programacion = (
+                entry.get('modo_programacion')
+                or _normalizar_modo_programacion_excel(
+                    entry.get('tipo_excel'),
+                    entry.get('tipo_pago_excel'),
+                    int(entry['total_cuotas']) if entry.get('total_cuotas') not in (None, '') else 1,
+                )
+            )
             frecuencia = entry['frecuencia']
             descripcion_importada = entry['descripcion_importada']
             tipo_excel = entry['tipo_excel']
@@ -2234,6 +2992,7 @@ def pagos_importar_excel_confirmar(request):
 
                     deuda = PagoProgramado.objects.create(
                         nombre=nombre[:120],
+                        modo_programacion=modo_programacion,
                         tipo=tipo_programado,
                         monto=monto,
                         fecha_inicio=fecha_inicio,
@@ -2257,7 +3016,11 @@ def pagos_importar_excel_confirmar(request):
 
             cache_deudas_archivo[debt_key] = deuda
 
-            if crear_pago and pagado > 0:
+            if modo_programacion == 'CUOTAS':
+                crear_pago = False
+                payment_key = None
+
+            if crear_pago and pagado > 0 and modo_programacion != 'CUOTAS':
                 if payment_key and payment_key in cache_pagos_archivo:
                     continue
 
@@ -2317,6 +3080,26 @@ def pagos_importar_excel_confirmar(request):
         'errores_confirmados': errores,
     }
     importacion.save()
+
+    _registrar_auditoria(
+        request,
+        accion='importar',
+        modulo='Importaciones',
+        objeto=importacion,
+        descripcion='Confirmación de importación masiva desde Excel/CSV.',
+        antes={},
+        despues={
+            **snapshot_instancia_auditoria(importacion),
+            'resumen_confirmacion': importacion.resumen,
+            'deudas_creadas': creadas,
+            'deudas_existentes': existentes,
+            'pagos_creados': pagos_creados,
+            'pagos_existentes': pagos_existentes,
+            'omitidas': omitidas,
+            'errores': errores,
+        },
+        es_critico=True,
+    )
 
     if 'pagos_import_preview' in request.session:
         del request.session['pagos_import_preview']
@@ -2380,10 +3163,74 @@ def importacion_revertir(request, pk):
         messages.info(request, 'Esta importación ya fue revertida anteriormente.')
         return redirect('importaciones_historial')
 
+    antes = snapshot_instancia_auditoria(importacion)
     detalles = list(importacion.detalles.all())
 
     pago_ids = sorted({d.pago_real_id for d in detalles if d.tipo_registro == 'pago_real' and d.pago_real_id})
     deuda_ids = sorted({d.pago_programado_id for d in detalles if d.tipo_registro == 'deuda' and d.pago_programado_id})
+
+    pagos_bloqueados = []
+    deudas_bloqueadas = []
+
+    if pago_ids:
+        for pago_real in (
+            PagoReal.objects
+            .filter(id__in=pago_ids)
+            .prefetch_related('movimientos_conciliados')
+            .select_related('pago')
+        ):
+            if pago_real.movimientos_conciliados.filter(conciliado=True).exists():
+                pagos_bloqueados.append({
+                    'id': pago_real.id,
+                    'compromiso': str(getattr(pago_real, 'pago', None) or '—'),
+                })
+
+    if deuda_ids:
+        pagos_importados_set = set(pago_ids)
+        for deuda in (
+            PagoProgramado.objects
+            .filter(id__in=deuda_ids)
+            .prefetch_related('pagos_realizados__movimientos_conciliados')
+        ):
+            tiene_pagos_manuales = deuda.pagos_realizados.exclude(id__in=pagos_importados_set).exists()
+            tiene_pago_importado_conciliado = deuda.pagos_realizados.filter(
+                id__in=pagos_importados_set,
+                movimientos_conciliados__conciliado=True,
+            ).exists()
+
+            if tiene_pagos_manuales or tiene_pago_importado_conciliado:
+                motivos = []
+                if tiene_pagos_manuales:
+                    motivos.append('tiene pagos reales posteriores o manuales')
+                if tiene_pago_importado_conciliado:
+                    motivos.append('tiene pagos importados conciliados con cartola')
+                deudas_bloqueadas.append({
+                    'id': deuda.id,
+                    'nombre': deuda.nombre,
+                    'motivos': motivos,
+                })
+
+    if pagos_bloqueados or deudas_bloqueadas:
+        _registrar_auditoria(
+            request,
+            accion='revertir_importacion_bloqueada',
+            modulo='Importaciones',
+            objeto=importacion,
+            descripcion='Intento de reversión bloqueado por registros con uso posterior o conciliación.',
+            antes=antes,
+            despues={
+                **snapshot_instancia_auditoria(importacion),
+                'pagos_bloqueados': pagos_bloqueados,
+                'deudas_bloqueadas': deudas_bloqueadas,
+            },
+            es_critico=True,
+        )
+        messages.error(
+            request,
+            'No se pudo revertir la importación porque existen registros con trabajo posterior o conciliación bancaria. '
+            'Primero corrige esos casos y luego vuelve a intentar.'
+        )
+        return redirect('importaciones_historial')
 
     pagos_eliminados = 0
     deudas_eliminadas = 0
@@ -2403,6 +3250,21 @@ def importacion_revertir(request, pk):
         importacion.revertida_en = timezone.now()
         importacion.revertida_por = request.user if request.user.is_authenticated else None
         importacion.save(update_fields=['estado', 'revertida_en', 'revertida_por'])
+
+    _registrar_auditoria(
+        request,
+        accion='revertir_importacion',
+        modulo='Importaciones',
+        objeto=importacion,
+        descripcion='Reversión de importación registrada en historial.',
+        antes=antes,
+        despues={
+            **snapshot_instancia_auditoria(importacion),
+            'pagos_eliminados': pagos_eliminados,
+            'deudas_eliminadas': deudas_eliminadas,
+        },
+        es_critico=True,
+    )
 
     messages.success(
         request,
@@ -2425,8 +3287,18 @@ def pagos_real_crear(request):
     if request.method == 'POST':
         form = PagoRealForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Pago registrado correctamente.')
+            pago_real = form.save()
+            _registrar_auditoria(
+                request,
+                accion='crear',
+                modulo='Pagos reales',
+                objeto=pago_real,
+                descripcion='Registro de pago real.',
+                antes={},
+                despues=snapshot_instancia_auditoria(pago_real),
+                es_critico=True,
+            )
+            messages.success(request, 'Compromiso registrado correctamente.')
             return redirect(next_url)
         messages.error(request, 'Revisa el formulario, hay campos inválidos.')
     else:
@@ -2465,9 +3337,20 @@ def pagos_real_editar(request, pk):
     tiene_conciliacion = movimiento_conciliado is not None
 
     if request.method == 'POST':
+        antes = snapshot_instancia_auditoria(pago_real)
         form = PagoRealForm(request.POST, instance=pago_real)
         if form.is_valid():
-            form.save()
+            pago_real = form.save()
+            _registrar_auditoria(
+                request,
+                accion='editar',
+                modulo='Pagos reales',
+                objeto=pago_real,
+                descripcion='Edición de pago real.',
+                antes=antes,
+                despues=snapshot_instancia_auditoria(pago_real),
+                es_critico=True,
+            )
             messages.success(request, 'Pago real actualizado correctamente.')
 
             if tiene_conciliacion:
@@ -2505,16 +3388,24 @@ def pagos_real_editar(request, pk):
 # REPORTES FINANCIEROS (V2) + EXPORT
 # ==================================================
 
+
 @staff_member_required
 def reportes_financieros(request):
     desde, hasta = _get_rango_fechas_from_request(request)
 
     if request.method == 'POST':
         filtro_unidad_negocio = (request.POST.get('unidad_negocio') or '').strip()
+        filtro_categoria_recurrente = (request.POST.get('categoria_recurrente') or '').strip()
     else:
         filtro_unidad_negocio = (request.GET.get('unidad_negocio') or '').strip()
+        filtro_categoria_recurrente = (request.GET.get('categoria_recurrente') or '').strip()
 
-    pagos_qs = _build_report_queryset(desde, hasta, filtro_unidad_negocio)
+    pagos_qs = _build_report_queryset(
+        desde,
+        hasta,
+        filtro_unidad_negocio,
+        filtro_categoria_recurrente,
+    )
 
     total = pagos_qs.aggregate(
         total=Coalesce(
@@ -2544,6 +3435,7 @@ def reportes_financieros(request):
     proyeccion_json = '{"labels":[],"valores":[],"acumulado":[]}'
     proyeccion_data = None
     proyeccion_tabla = []
+    analisis_proyeccion = None
 
     if request.method == 'POST':
         diarios = (
@@ -2609,21 +3501,36 @@ def reportes_financieros(request):
 
         resumen_unidades_periodo = _resumen_pagos_por_unidad(pagos_qs)
 
-        # PROYECCIÓN FUTURA
-        proyeccion_json = generar_proyeccion_json(
-            hasta,
-            unidad_negocio=filtro_unidad_negocio or None
-        )
+        if filtro_categoria_recurrente:
+            eventos_qs = _build_proyeccion_eventos_queryset(
+                hasta,
+                unidad_negocio=filtro_unidad_negocio or None,
+                categoria_recurrente=filtro_categoria_recurrente or None,
+            )
+            proyeccion_tabla = _build_proyeccion_tabla_desde_eventos(eventos_qs)
+            proyeccion_json = _proyeccion_json_desde_tabla(proyeccion_tabla)
+            proyeccion_data = _resumen_proyeccion_desde_tabla(proyeccion_tabla)
+            analisis_proyeccion = _analisis_proyeccion_desde_tabla(proyeccion_tabla)
+        else:
+            proyeccion_json = generar_proyeccion_json(
+                hasta,
+                unidad_negocio=filtro_unidad_negocio or None
+            )
 
-        proyeccion_data = resumen_proyeccion(
-            hasta,
-            unidad_negocio=filtro_unidad_negocio or None
-        )
+            proyeccion_data = resumen_proyeccion(
+                hasta,
+                unidad_negocio=filtro_unidad_negocio or None
+            )
 
-        proyeccion_tabla = obtener_proyeccion_hasta_fecha(
-            hasta,
-            unidad_negocio=filtro_unidad_negocio or None
-        )
+            proyeccion_tabla = obtener_proyeccion_hasta_fecha(
+                hasta,
+                unidad_negocio=filtro_unidad_negocio or None
+            )
+
+            analisis_proyeccion = analisis_proyeccion_recurrentes(
+                hasta,
+                unidad_negocio=filtro_unidad_negocio or None
+            )
 
     form = ReportesFiltroForm(initial={
         "fecha_desde": desde,
@@ -2644,11 +3551,15 @@ def reportes_financieros(request):
         'metodo_principal': metodo_principal,
         'resumen_unidades_periodo': resumen_unidades_periodo,
         'filtro_unidad_negocio': filtro_unidad_negocio,
+        'filtro_categoria_recurrente': filtro_categoria_recurrente,
         'unidades_negocio_disponibles': _get_unidades_negocio_disponibles_reportes(),
+        'categorias_recurrentes_disponibles': _get_categorias_recurrentes_disponibles_reportes(),
         'proyeccion_json': proyeccion_json,
         'proyeccion_data': proyeccion_data,
         'proyeccion_tabla': proyeccion_tabla,
+        'analisis_proyeccion': analisis_proyeccion,
     })
+
 
 # ==================================================
 # CARTOLAS - PARSEO (CSV/XLSX) + DEDUPE
@@ -3267,6 +4178,7 @@ def cartolas_conciliar(request):
         if delta > 7:
             warn.append(f"Fecha difiere en {delta} día(s)")
 
+    antes = snapshot_instancia_auditoria(mov)
     if hasattr(mov, "marcar_conciliado"):
         mov.marcar_conciliado(pago, nota=nota)
     else:
@@ -3275,6 +4187,17 @@ def cartolas_conciliar(request):
         mov.conciliado_en = timezone.now()
         mov.nota_conciliacion = (nota or "")[:255]
         mov.save()
+
+    _registrar_auditoria(
+        request,
+        accion='conciliar',
+        modulo='Conciliación bancaria',
+        objeto=mov,
+        descripcion=f'Conciliación manual con pago real #{pago.id} - {pago.pago.nombre}.',
+        antes=antes,
+        despues=snapshot_instancia_auditoria(mov),
+        es_critico=True,
+    )
 
     if warn:
         messages.warning(request, "Conciliado ✅ (ojo: " + " | ".join(warn) + ")")
@@ -3287,9 +4210,16 @@ def cartolas_conciliar(request):
 
 @staff_member_required
 def cartolas_desconciliar(request, mov_id: int):
+    if request.method != 'POST':
+        messages.error(request, 'La desconciliación debe ejecutarse mediante POST.')
+        return redirect('cartolas_lista')
+
     mov = get_object_or_404(MovimientoBancario, id=mov_id)
+    next_url = request.POST.get('next') or 'cartolas_lista'
 
     if getattr(mov, "conciliado", False):
+        antes = snapshot_instancia_auditoria(mov)
+        pago_real_id = getattr(mov, 'pago_real_id', None)
         if hasattr(mov, "desconciliar"):
             mov.desconciliar()
         else:
@@ -3298,11 +4228,21 @@ def cartolas_desconciliar(request, mov_id: int):
             mov.conciliado_en = None
             mov.nota_conciliacion = ""
             mov.save()
+        _registrar_auditoria(
+            request,
+            accion='desconciliar',
+            modulo='Conciliación bancaria',
+            objeto=mov,
+            descripcion=f'Desconciliación manual de movimiento bancario. Pago previo: {pago_real_id or "-"}',
+            antes=antes,
+            despues=snapshot_instancia_auditoria(mov),
+            es_critico=True,
+        )
         messages.success(request, "Movimiento desconciliado ✅")
     else:
         messages.info(request, "Este movimiento ya estaba sin conciliar.")
 
-    return redirect("cartolas_lista")
+    return redirect(next_url)
 
 
 # ==================================================

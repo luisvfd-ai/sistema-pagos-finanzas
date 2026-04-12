@@ -31,6 +31,16 @@
                 {% endfor %}
             </div>
             {% endif %}
+            {% if filtro_categoria_recurrente %}
+            <div class="report-filter-badge mt-2">
+                Categoría filtrada:
+                {% for c in categorias_recurrentes_disponibles %}
+                    {% if c.value == filtro_categoria_recurrente %}
+                        <strong>{{ c.label }}</strong>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -40,24 +50,12 @@
 
             <div class="filter-field">
                 <label class="form-label">Desde</label>
-                <input
-                    type="date"
-                    name="fecha_desde"
-                    class="form-control"
-                    value="{{ desde|date:'Y-m-d' }}"
-                    required
-                >
+                <input type="date" name="fecha_desde" class="form-control" value="{{ desde|date:'Y-m-d' }}" required>
             </div>
 
             <div class="filter-field">
                 <label class="form-label">Hasta</label>
-                <input
-                    type="date"
-                    name="fecha_hasta"
-                    class="form-control"
-                    value="{{ hasta|date:'Y-m-d' }}"
-                    required
-                >
+                <input type="date" name="fecha_hasta" class="form-control" value="{{ hasta|date:'Y-m-d' }}" required>
             </div>
 
             <div class="filter-field">
@@ -65,37 +63,40 @@
                 <select name="unidad_negocio" class="form-select">
                     <option value="">Todas</option>
                     {% for u in unidades_negocio_disponibles %}
-                        <option value="{{ u.value }}" {% if filtro_unidad_negocio == u.value %}selected{% endif %}>
-                            {{ u.label }}
-                        </option>
+                        <option value="{{ u.value }}" {% if filtro_unidad_negocio == u.value %}selected{% endif %}>{{ u.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label class="form-label">Categoría recurrente</label>
+                <select name="categoria_recurrente" class="form-select">
+                    <option value="">Todas</option>
+                    {% for c in categorias_recurrentes_disponibles %}
+                        <option value="{{ c.value }}" {% if filtro_categoria_recurrente == c.value %}selected{% endif %}>{{ c.label }}</option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="filter-actions">
-                <button type="submit" class="btn btn-primary">
-                    Generar reporte
-                </button>
+                <button type="submit" class="btn btn-primary">Generar reporte</button>
             </div>
         </form>
 
         <small class="text-muted d-block mt-2">
-            Tip: usa rangos cortos (7 a 30 días) para histórico y rangos más amplios para revisar la proyección futura.
+            Tip: usa rangos cortos para histórico y define una fecha mayor para revisar la proyección futura.
         </small>
     </div>
 
-    {% if request.method != "POST" %}
-
+    {% if not mostrar_reporte %}
         <div class="report-card mb-4">
             <p class="text-muted mb-0">
                 Selecciona un rango de fechas y presiona <strong>Generar reporte</strong>.
             </p>
         </div>
-
     {% else %}
 
         {% if eventos and eventos|length > 0 %}
-
             <div class="report-card">
                 <div class="export-toolbar">
                     <div>
@@ -104,18 +105,9 @@
                     </div>
 
                     <div class="export-actions">
-                        <a class="btn btn-outline-secondary"
-                           href="?export=csv&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}">
-                            CSV
-                        </a>
-                        <a class="btn btn-outline-secondary"
-                           href="?export=xlsx&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}">
-                            Excel
-                        </a>
-                        <a class="btn btn-outline-secondary"
-                           href="?export=pdf&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}">
-                            PDF
-                        </a>
+                        <a class="btn btn-outline-secondary" href="?export=csv&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}&categoria_recurrente={{ filtro_categoria_recurrente }}">CSV</a>
+                        <a class="btn btn-outline-secondary" href="?export=xlsx&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}&categoria_recurrente={{ filtro_categoria_recurrente }}">Excel</a>
+                        <a class="btn btn-outline-secondary" href="?export=pdf&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}&categoria_recurrente={{ filtro_categoria_recurrente }}">PDF</a>
                     </div>
                 </div>
             </div>
@@ -146,6 +138,35 @@
                 </div>
             </div>
 
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-xl-6">
+                    <div class="report-card h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                            <h5 class="mb-0">📅 Total pagado por día</h5>
+                            <small class="text-muted">Evolución diaria del período</small>
+                        </div>
+                        <div class="chart-box" style="height: 320px;">
+                            <canvas id="chartDiario"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-xl-6">
+                    <div class="report-card h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                            <h5 class="mb-0">💳 Total por método de pago</h5>
+                            <small class="text-muted">Distribución acumulada del período</small>
+                        </div>
+                        <div class="chart-box" style="height: 320px;">
+                            <canvas id="chartMetodo"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script id="report-diario-data" type="application/json">{{ chart_diario_json|safe }}</script>
+            <script id="report-metodo-data" type="application/json">{{ chart_metodo_json|safe }}</script>
+            <script id="proyeccion-data" type="application/json">{{ proyeccion_json|safe }}</script>
+
             <div class="report-card mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
                     <h5 class="mb-0">📚 Resumen por unidad del período</h5>
@@ -153,257 +174,206 @@
                 </div>
 
                 {% if resumen_unidades_periodo %}
-                    <div class="report-table-desktop">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-exec mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Unidad</th>
-                                        <th class="text-end">Total pagado</th>
-                                        <th class="text-end">Cantidad pagos</th>
-                                        <th class="text-end">Promedio</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in resumen_unidades_periodo %}
-                                    <tr>
-                                        <td><strong>{{ item.unidad_negocio_label }}</strong></td>
-                                        <td class="text-end">{{ item.total|clp }}</td>
-                                        <td class="text-end">{{ item.cantidad }}</td>
-                                        <td class="text-end">{{ item.promedio|clp }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="report-cards-mobile">
-                        {% for item in resumen_unidades_periodo %}
-                        <div class="report-mobile-card report-mobile-card--compact">
-                            <div class="report-mobile-card__top">
-                                <h4 class="report-mobile-card__title">{{ item.unidad_negocio_label }}</h4>
-                                <div class="report-mobile-card__amount">{{ item.total|clp }}</div>
-                            </div>
-
-                            <div class="report-mobile-card__grid">
-                                <div class="report-mobile-card__item">
-                                    <span class="label">Cantidad pagos</span>
-                                    <span class="value">{{ item.cantidad }}</span>
-                                </div>
-                                <div class="report-mobile-card__item">
-                                    <span class="label">Promedio</span>
-                                    <span class="value">{{ item.promedio|clp }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-exec mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Unidad</th>
+                                    <th class="text-end">Total pagado</th>
+                                    <th class="text-end">Cantidad pagos</th>
+                                    <th class="text-end">Promedio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in resumen_unidades_periodo %}
+                                <tr>
+                                    <td><strong>{{ item.unidad_negocio_label }}</strong></td>
+                                    <td class="text-end">{{ item.total|clp }}</td>
+                                    <td class="text-end">{{ item.cantidad }}</td>
+                                    <td class="text-end">{{ item.promedio|clp }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 {% else %}
-                    <p class="text-muted mb-0">No hay pagos agrupables por unidad en el período.</p>
+                    <p class="text-muted mb-0">No hay pagos reales en el período seleccionado.</p>
                 {% endif %}
             </div>
-
-            <div class="row g-3 mb-4">
-                <div class="col-12 col-xl-7">
-                    <div class="report-card">
-                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
-                            <h5 class="mb-0">📊 Evolución diaria (total pagado por día)</h5>
-                            <small class="text-muted">Suma por fecha_pago</small>
-                        </div>
-
-                        <script id="report-diario-data" type="application/json">{{ chart_diario_json|default:"{}"|safe }}</script>
-
-                        <div class="chart-shell">
-                            <div class="chart-box">
-                                <canvas id="chartDiario"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-xl-5">
-                    <div class="report-card">
-                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
-                            <h5 class="mb-0">🥘 Distribución por método</h5>
-                            <small class="text-muted">Suma por metodo_pago</small>
-                        </div>
-
-                        <script id="report-metodo-data" type="application/json">{{ chart_metodo_json|default:"{}"|safe }}</script>
-
-                        <div class="chart-shell">
-                            <div class="chart-box">
-                                <canvas id="chartMetodo"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-card mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
-                    <h5 class="mb-0">🏁 Top compromisos del período</h5>
-                    <small class="text-muted">Top por monto pagado</small>
-                </div>
-
-                {% if top_compromisos %}
-                    <div class="report-table-desktop">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-exec mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Compromiso</th>
-                                        <th>Unidad</th>
-                                        <th class="text-end">Total pagado</th>
-                                        <th class="text-end">Cantidad pagos</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in top_compromisos %}
-                                    <tr>
-                                        <td>{{ item.nombre }}</td>
-                                        <td>
-                                            {% if item.unidad_negocio_label %}
-                                                {{ item.unidad_negocio_label }}
-                                            {% else %}
-                                                Otros
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-end">{{ item.total|clp }}</td>
-                                        <td class="text-end">{{ item.cantidad }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="report-cards-mobile">
-                        {% for item in top_compromisos %}
-                        <div class="report-mobile-card report-mobile-card--compact">
-                            <div class="report-mobile-card__top">
-                                <h4 class="report-mobile-card__title">{{ item.nombre }}</h4>
-                            </div>
-
-                            <div class="report-mobile-card__grid">
-                                <div class="report-mobile-card__item">
-                                    <span class="label">Unidad</span>
-                                    <span class="value">
-                                        {% if item.unidad_negocio_label %}
-                                            {{ item.unidad_negocio_label }}
-                                        {% else %}
-                                            Otros
-                                        {% endif %}
-                                    </span>
-                                </div>
-                                <div class="report-mobile-card__item">
-                                    <span class="label">Total pagado</span>
-                                    <span class="value">{{ item.total|clp }}</span>
-                                </div>
-                                <div class="report-mobile-card__item">
-                                    <span class="label">Cantidad pagos</span>
-                                    <span class="value">{{ item.cantidad }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-muted mb-0">No hay suficientes datos para ranking.</p>
-                {% endif %}
-            </div>
-
         {% else %}
-
             <div class="report-card mb-4">
-                <p class="text-muted mb-0">
-                    No hay pagos reales en el período seleccionado.
-                </p>
+                <div class="text-muted">No se registran pagos reales en el período seleccionado.</div>
             </div>
-
         {% endif %}
 
         {% if proyeccion_data %}
-        <div class="report-card mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
-                <h5 class="mb-0">🔮 Proyección futura</h5>
-                <small class="text-muted">Compromisos pendientes futuros hasta {{ hasta|date:"d-m-Y" }}</small>
-            </div>
-
-            <div class="kpi-grid mb-4">
-                <div class="kpi">
-                    <div class="kpi-title">Total proyectado</div>
-                    <div class="kpi-value">{{ proyeccion_data.total_proyectado|clp }}</div>
-                    <small>Compromisos pendientes futuros</small>
+            <div class="report-card mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                    <h5 class="mb-0">🔮 Proyección futura</h5>
+                    <small class="text-muted">Eventos pendientes hasta la fecha elegida</small>
                 </div>
 
-                <div class="kpi">
-                    <div class="kpi-title">Cantidad eventos</div>
-                    <div class="kpi-value">{{ proyeccion_data.cantidad_eventos }}</div>
-                    <small>Eventos pendientes incluidos</small>
-                </div>
-
-                <div class="kpi">
-                    <div class="kpi-title">Promedio diario proyectado</div>
-                    <div class="kpi-value">{{ proyeccion_data.promedio|clp }}</div>
-                    <small>Total / cantidad de eventos</small>
-                </div>
-
-                <div class="kpi">
-                    <div class="kpi-title">Día más cargado</div>
-                    <div class="kpi-value">
-                        {% if proyeccion_data.mayor_dia %}
-                            {{ proyeccion_data.mayor_dia.monto|clp }}
-                        {% else %}
-                            —
-                        {% endif %}
+                <div class="kpi-grid mb-3">
+                    <div class="kpi">
+                        <div class="kpi-title">Total proyectado</div>
+                        <div class="kpi-value">{{ proyeccion_data.total_proyectado|clp }}</div>
+                        <small>Compromisos pendientes futuros</small>
                     </div>
-                    <small>
-                        {% if proyeccion_data.mayor_dia %}
-                            {{ proyeccion_data.mayor_dia.fecha|date:"d-m-Y" }}
-                        {% else %}
-                            Sin datos
-                        {% endif %}
-                    </small>
-                </div>
-            </div>
 
-            <script id="proyeccion-data" type="application/json">{{ proyeccion_json|default:"{}"|safe }}</script>
+                    <div class="kpi">
+                        <div class="kpi-title">Cantidad eventos</div>
+                        <div class="kpi-value">{{ proyeccion_data.cantidad_eventos }}</div>
+                        <small>Eventos pendientes incluidos</small>
+                    </div>
 
-            <div class="row g-3 mb-4">
-                <div class="col-12 col-xl-6">
-                    <div class="chart-shell">
-                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
-                            <strong>Egreso proyectado por día</strong>
-                            <small class="text-muted">Montos diarios</small>
+                    <div class="kpi">
+                        <div class="kpi-title">Promedio diario proyectado</div>
+                        <div class="kpi-value">{{ proyeccion_data.promedio|clp }}</div>
+                        <small>Total / cantidad de eventos</small>
+                    </div>
+
+                    <div class="kpi">
+                        <div class="kpi-title">Día más cargado</div>
+                        <div class="kpi-value">
+                            {% if proyeccion_data.mayor_dia %}
+                                {{ proyeccion_data.mayor_dia.monto|clp }}
+                            {% else %}
+                                —
+                            {% endif %}
                         </div>
-                        <div class="chart-box">
-                            <canvas id="chartProyeccionDiaria"></canvas>
-                        </div>
+                        <small>
+                            {% if proyeccion_data.mayor_dia %}
+                                {{ proyeccion_data.mayor_dia.fecha|date:"d-m-Y" }}
+                            {% else %}
+                                Sin datos
+                            {% endif %}
+                        </small>
                     </div>
                 </div>
 
-                <div class="col-12 col-xl-6">
-                    <div class="chart-shell">
-                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
-                            <strong>Acumulado proyectado</strong>
-                            <small class="text-muted">Curva de salida</small>
+                {% if analisis_proyeccion %}
+                <div class="kpi-grid mb-3">
+                    <div class="kpi">
+                        <div class="kpi-title">Carga recurrente mensual</div>
+                        <div class="kpi-value">{{ analisis_proyeccion.carga_recurrente_mensual_estimada|clp }}</div>
+                        <small>Primer vencimiento vigente de cada recurrente</small>
+                    </div>
+
+                    <div class="kpi">
+                        <div class="kpi-title">Proyección recurrentes</div>
+                        <div class="kpi-value">{{ analisis_proyeccion.total_recurrentes|clp }}</div>
+                        <small>{{ analisis_proyeccion.cantidad_recurrentes }} eventos recurrentes</small>
+                    </div>
+
+                    <div class="kpi">
+                        <div class="kpi-title">Proyección cuotas</div>
+                        <div class="kpi-value">{{ analisis_proyeccion.total_cuotas|clp }}</div>
+                        <small>{{ analisis_proyeccion.cantidad_cuotas }} eventos en cuotas</small>
+                    </div>
+
+                    <div class="kpi">
+                        <div class="kpi-title">Proyección únicos</div>
+                        <div class="kpi-value">{{ analisis_proyeccion.total_unicos|clp }}</div>
+                        <small>{{ analisis_proyeccion.cantidad_unicos }} eventos únicos</small>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-xl-6">
+                        <div class="report-card h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                                <h6 class="mb-0">📈 Egreso diario proyectado</h6>
+                                <small class="text-muted">Montos por fecha</small>
+                            </div>
+                            <div class="chart-box" style="height: 320px;">
+                                <canvas id="chartProyeccionDiaria"></canvas>
+                            </div>
                         </div>
-                        <div class="chart-box">
-                            <canvas id="chartProyeccionAcumulado"></canvas>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <div class="report-card h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                                <h6 class="mb-0">📊 Acumulado proyectado</h6>
+                                <small class="text-muted">Curva acumulada hasta la fecha</small>
+                            </div>
+                            <div class="chart-box" style="height: 320px;">
+                                <canvas id="chartProyeccionAcumulado"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {% if proyeccion_tabla %}
-                <div class="report-table-desktop">
+                {% if analisis_proyeccion.categorias %}
+                <div class="report-card mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                        <h6 class="mb-0">Desglose de recurrentes por categoría</h6>
+                        <small class="text-muted">Sueldos, arriendos y gastos operativos</small>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-exec mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Categoría</th>
+                                    <th class="text-end">Total proyectado</th>
+                                    <th class="text-end">Eventos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in analisis_proyeccion.categorias %}
+                                <tr>
+                                    <td><strong>{{ item.categoria_label }}</strong></td>
+                                    <td class="text-end">{{ item.total|clp }}</td>
+                                    <td class="text-end">{{ item.cantidad_eventos }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if analisis_proyeccion.unidades %}
+                <div class="report-card mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                        <h6 class="mb-0">Recurrentes por unidad</h6>
+                        <small class="text-muted">Carga recurrente proyectada por lugar</small>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-exec mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Unidad</th>
+                                    <th class="text-end">Total recurrente</th>
+                                    <th class="text-end">Eventos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in analisis_proyeccion.unidades %}
+                                <tr>
+                                    <td><strong>{{ item.unidad_negocio_label }}</strong></td>
+                                    <td class="text-end">{{ item.total_recurrente|clp }}</td>
+                                    <td class="text-end">{{ item.cantidad_eventos }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if proyeccion_tabla %}
+                <div class="report-card">
+                    <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                        <h6 class="mb-0">Detalle de proyección</h6>
+                        <small class="text-muted">Listado de eventos pendientes incluidos</small>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover table-exec mb-0">
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
-                                    <th>Compromiso</th>
+                                    <th>Concepto</th>
                                     <th>Unidad</th>
                                     <th class="text-end">Monto</th>
                                     <th class="text-end">Acumulado</th>
@@ -423,39 +393,9 @@
                         </table>
                     </div>
                 </div>
-
-                <div class="report-cards-mobile">
-                    {% for item in proyeccion_tabla %}
-                    <div class="report-mobile-card report-mobile-card--compact">
-                        <div class="report-mobile-card__top">
-                            <div>
-                                <h4 class="report-mobile-card__title">{{ item.nombre }}</h4>
-                                <div class="report-mobile-card__meta">
-                                    Fecha: {{ item.fecha|date:"d-m-Y" }}
-                                </div>
-                            </div>
-                            <div class="report-mobile-card__amount">{{ item.monto|clp }}</div>
-                        </div>
-
-                        <div class="report-mobile-card__grid">
-                            <div class="report-mobile-card__item">
-                                <span class="label">Unidad</span>
-                                <span class="value">{{ item.unidad_negocio_label }}</span>
-                            </div>
-                            <div class="report-mobile-card__item">
-                                <span class="label">Acumulado</span>
-                                <span class="value">{{ item.acumulado|clp }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
+                {% endif %}
+            </div>
         {% endif %}
-
     {% endif %}
-
 </div>
-
 {% endblock %}

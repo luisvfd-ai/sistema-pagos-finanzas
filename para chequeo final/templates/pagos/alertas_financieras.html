@@ -1,0 +1,612 @@
+{% extends "base.html" %}
+{% load money_filters %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pagos/css/alertas.css' %}?v=mobile6">
+{% endblock %}
+
+{% block title %}Alertas financieras{% endblock %}
+
+{% block content %}
+<div class="container-fluid alertas-page">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2 alertas-toolbar">
+        <div>
+            <h3 class="mb-1">Panel de alertas financieras</h3>
+            <div class="text-muted small">
+                Seguimiento operativo agrupado por unidad y categoría, sin duplicaciones entre bloques.
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            {% if puede_enviar_alerta_email %}
+            <form method="post" action="{% url 'enviar_alerta_urgente_email' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-envelope me-1"></i>
+                    Enviar alerta urgente por correo
+                </button>
+            </form>
+            {% endif %}
+
+            <a href="{% url 'dashboard_financiero' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver al dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-warning border shadow-sm alertas-info-banner">
+        <div class="fw-semibold mb-1">Correo urgente</div>
+        <div>
+            Se enviaron solo compromisos <strong>vencidos</strong> y compromisos que
+            <strong>vencen en máximo {{ dias_urgentes }} día(s)</strong>.
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-3 alertas-card-resumen">
+            <div class="card shadow-sm border-danger h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Vencidas</div>
+                    <div class="fs-3 fw-bold text-danger">{{ alertas_resumen.vencidas_count }}</div>
+                    <div class="small text-muted">Saldo pendiente real: {{ alertas_resumen.vencidas_monto|clp }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 alertas-card-resumen">
+            <div class="card shadow-sm border-warning h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Vencen hoy</div>
+                    <div class="fs-3 fw-bold text-warning">{{ alertas_resumen.hoy_count }}</div>
+                    <div class="small text-muted">Saldo pendiente real: {{ alertas_resumen.hoy_monto|clp }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 alertas-card-resumen">
+            <div class="card shadow-sm border-warning h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Próximas 1 a 3 días</div>
+                    <div class="fs-3 fw-bold text-warning">{{ alertas_resumen.proximas_3_count }}</div>
+                    <div class="small text-muted">Saldo pendiente real: {{ alertas_resumen.proximas_3_monto|clp }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 alertas-card-resumen">
+            <div class="card shadow-sm border-primary h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Próximas 4 a 7 días</div>
+                    <div class="fs-3 fw-bold text-primary">{{ alertas_resumen.proximas_7_count }}</div>
+                    <div class="small text-muted">Saldo pendiente real: {{ alertas_resumen.proximas_7_monto|clp }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-dark">
+        <div class="card-header bg-dark text-white">
+            <strong>Resumen del correo urgente</strong>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6 col-lg-3 alertas-card-resumen">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Total urgente por correo</div>
+                        <div class="fw-bold fs-4">{{ alertas_email_resumen.total_eventos }}</div>
+                        <div class="small text-muted">Monto eventos: {{ alertas_email_resumen.total_monto|clp }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 alertas-card-resumen">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Vencidas</div>
+                        <div class="fw-bold fs-4 text-danger">{{ alertas_email_resumen.vencidas_count }}</div>
+                        <div class="small text-muted">Monto eventos: {{ alertas_email_resumen.vencidas_monto|clp }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 alertas-card-resumen">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Vencen hoy</div>
+                        <div class="fw-bold fs-4 text-warning">{{ alertas_email_resumen.hoy_count }}</div>
+                        <div class="small text-muted">Monto eventos: {{ alertas_email_resumen.hoy_monto|clp }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 alertas-card-resumen">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Próximas hasta {{ dias_urgentes }} día(s)</div>
+                        <div class="fw-bold fs-4 text-warning">{{ alertas_email_resumen.proximas_count }}</div>
+                        <div class="small text-muted">Monto eventos: {{ alertas_email_resumen.proximas_monto|clp }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VENCIDAS -->
+    <div class="card shadow-sm mb-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <strong>Vencidas</strong>
+        </div>
+        <div class="card-body">
+            {% if alertas_panel_agrupado.vencidas %}
+                {% for unidad in alertas_panel_agrupado.vencidas %}
+                <div style="margin-bottom:18px; border:1px solid #d1d5db; border-radius:14px; overflow:hidden;">
+                    <div style="padding:14px 16px; background:#111827; color:#ffffff;">
+                        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                            <div>
+                                <div style="font-size:18px; font-weight:bold;">{{ unidad.unidad }}</div>
+                                <div style="margin-top:4px; font-size:13px; color:#d1d5db;">
+                                    {{ unidad.cantidad }} compromiso(s) · Saldo pendiente total: {{ unidad.saldo_total|clp }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% for grupo in unidad.categorias %}
+                    <div style="border-top:1px solid #e5e7eb;">
+                        <div style="padding:12px 14px; background:#fef2f2; border-bottom:1px solid #e5e7eb;">
+                            <div style="font-size:16px; font-weight:bold; color:#7f1d1d;">{{ grupo.categoria }}</div>
+                            <div style="margin-top:4px; font-size:13px; color:#7f1d1d;">
+                                {{ grupo.cantidad }} compromiso(s) · Saldo pendiente: {{ grupo.saldo_total|clp }}
+                            </div>
+                        </div>
+
+                        <div class="alertas-table-desktop">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0 alertas-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 120px;">Fecha</th>
+                                            <th>Concepto</th>
+                                            <th class="text-end" style="width: 150px;">Monto evento</th>
+                                            <th class="text-end" style="width: 160px;">Pagado acumulado</th>
+                                            <th class="text-end" style="width: 170px;">Saldo pendiente real</th>
+                                            <th style="width: 130px;">Prioridad</th>
+                                            <th style="width: 180px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for e in grupo.eventos %}
+                                        <tr style="background: {{ e.prioridad_fila_bg }};">
+                                            <td>{{ e.fecha|date:"d-m-Y" }}</td>
+                                            <td>
+                                                <div class="fw-semibold">{{ e.nombre }}</div>
+                                                <div class="small" style="color: {{ e.prioridad_fila_text }};">
+                                                    Estado real: {{ e.estado_compromiso }} · Eventos pendientes: {{ e.cantidad_eventos_pendientes }}
+                                                </div>
+                                            </td>
+                                            <td class="text-end">{{ e.monto_evento|clp }}</td>
+                                            <td class="text-end">{{ e.pagado_acumulado|clp }}</td>
+                                            <td class="text-end text-danger fw-semibold">{{ e.saldo_pendiente_real|clp }}</td>
+                                            <td>
+                                                <span class="badge" style="background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                                    {{ e.prioridad_label }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next={% url 'alertas_financieras' %}" class="btn btn-sm btn-danger">
+                                                    Registrar pago
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="alertas-cards-mobile">
+                            {% for e in grupo.eventos %}
+                            <div class="alerta-mobile-card alerta-mobile-card--danger" style="background: {{ e.prioridad_fila_bg }};">
+                                <div class="alerta-mobile-card__top">
+                                    <span class="alerta-mobile-card__chip" style="background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                        {{ e.prioridad_label }}
+                                    </span>
+                                    <span class="alerta-mobile-card__date">{{ e.fecha|date:"d-m-Y" }}</span>
+                                </div>
+
+                                <h4 class="alerta-mobile-card__title">{{ e.nombre }}</h4>
+
+                                <div class="alerta-mobile-card__subtitle" style="color: {{ e.prioridad_fila_text }};">
+                                    Unidad: {{ unidad.unidad }} · Categoría: {{ grupo.categoria }} · Estado real: {{ e.estado_compromiso }} · Eventos pendientes: {{ e.cantidad_eventos_pendientes }}
+                                </div>
+
+                                <div class="alerta-mobile-card__grid">
+                                    <div class="alerta-mobile-card__item">
+                                        <span class="label">Monto evento</span>
+                                        <span class="value">{{ e.monto_evento|clp }}</span>
+                                    </div>
+                                    <div class="alerta-mobile-card__item">
+                                        <span class="label">Pagado acumulado</span>
+                                        <span class="value value-ok">{{ e.pagado_acumulado|clp }}</span>
+                                    </div>
+                                    <div class="alerta-mobile-card__item alerta-mobile-card__item--full">
+                                        <span class="label">Saldo pendiente real</span>
+                                        <span class="value value-danger">{{ e.saldo_pendiente_real|clp }}</span>
+                                    </div>
+                                </div>
+
+                                <a href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next={% url 'alertas_financieras' %}"
+                                   class="btn btn-danger w-100 alerta-mobile-card__btn">
+                                    Registrar pago
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="alertas-empty-state alertas-empty-state--success">
+                <i class="fas fa-check-circle"></i>
+                <span>No hay alertas vencidas.</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- VENCEN HOY -->
+    <div class="card shadow-sm mb-4 border-warning">
+        <div class="card-header bg-warning">
+            <strong>Vencen hoy</strong>
+        </div>
+        <div class="card-body">
+            {% if alertas_panel_agrupado.vencen_hoy %}
+                {% for unidad in alertas_panel_agrupado.vencen_hoy %}
+                <div style="margin-bottom:18px; border:1px solid #d1d5db; border-radius:14px; overflow:hidden;">
+                    <div style="padding:14px 16px; background:#111827; color:#ffffff;">
+                        <div style="font-size:18px; font-weight:bold;">{{ unidad.unidad }}</div>
+                        <div style="margin-top:4px; font-size:13px; color:#d1d5db;">
+                            {{ unidad.cantidad }} compromiso(s) · Saldo pendiente total: {{ unidad.saldo_total|clp }}
+                        </div>
+                    </div>
+
+                    {% for grupo in unidad.categorias %}
+                    <div style="border-top:1px solid #e5e7eb;">
+                        <div style="padding:12px 14px; background:#fffbeb; border-bottom:1px solid #e5e7eb;">
+                            <div style="font-size:16px; font-weight:bold; color:#92400e;">{{ grupo.categoria }}</div>
+                            <div style="margin-top:4px; font-size:13px; color:#92400e;">
+                                {{ grupo.cantidad }} compromiso(s) · Saldo pendiente: {{ grupo.saldo_total|clp }}
+                            </div>
+                        </div>
+
+                        <div class="alertas-table-desktop">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0 alertas-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 120px;">Fecha</th>
+                                            <th>Concepto</th>
+                                            <th class="text-end" style="width: 150px;">Monto evento</th>
+                                            <th class="text-end" style="width: 160px;">Pagado acumulado</th>
+                                            <th class="text-end" style="width: 170px;">Saldo pendiente real</th>
+                                            <th style="width: 130px;">Prioridad</th>
+                                            <th style="width: 180px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for e in grupo.eventos %}
+                                        <tr style="background: {{ e.prioridad_fila_bg }};">
+                                            <td>{{ e.fecha|date:"d-m-Y" }}</td>
+                                            <td>
+                                                <div class="fw-semibold">{{ e.nombre }}</div>
+                                                <div class="small" style="color: {{ e.prioridad_fila_text }};">
+                                                    Estado real: {{ e.estado_compromiso }} · Eventos pendientes: {{ e.cantidad_eventos_pendientes }}
+                                                </div>
+                                            </td>
+                                            <td class="text-end">{{ e.monto_evento|clp }}</td>
+                                            <td class="text-end">{{ e.pagado_acumulado|clp }}</td>
+                                            <td class="text-end fw-semibold">{{ e.saldo_pendiente_real|clp }}</td>
+                                            <td>
+                                                <span class="badge" style="background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                                    {{ e.prioridad_label }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next={% url 'alertas_financieras' %}" class="btn btn-sm btn-outline-warning">
+                                                    Registrar pago
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="alertas-cards-mobile">
+                            {% for e in grupo.eventos %}
+                            <div class="alerta-mobile-card alerta-mobile-card--warning" style="background: {{ e.prioridad_fila_bg }};">
+                                <div class="alerta-mobile-card__top">
+                                    <span class="alerta-mobile-card__chip" style="background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                        {{ e.prioridad_label }}
+                                    </span>
+                                    <span class="alerta-mobile-card__date">{{ e.fecha|date:"d-m-Y" }}</span>
+                                </div>
+
+                                <h4 class="alerta-mobile-card__title">{{ e.nombre }}</h4>
+
+                                <div class="alerta-mobile-card__subtitle" style="color: {{ e.prioridad_fila_text }};">
+                                    Unidad: {{ unidad.unidad }} · Categoría: {{ grupo.categoria }} · Estado real: {{ e.estado_compromiso }} · Eventos pendientes: {{ e.cantidad_eventos_pendientes }}
+                                </div>
+
+                                <div class="alerta-mobile-card__grid">
+                                    <div class="alerta-mobile-card__item">
+                                        <span class="label">Monto evento</span>
+                                        <span class="value">{{ e.monto_evento|clp }}</span>
+                                    </div>
+                                    <div class="alerta-mobile-card__item">
+                                        <span class="label">Pagado acumulado</span>
+                                        <span class="value value-ok">{{ e.pagado_acumulado|clp }}</span>
+                                    </div>
+                                    <div class="alerta-mobile-card__item alerta-mobile-card__item--full">
+                                        <span class="label">Saldo pendiente real</span>
+                                        <span class="value value-warning">{{ e.saldo_pendiente_real|clp }}</span>
+                                    </div>
+                                </div>
+
+                                <a href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next={% url 'alertas_financieras' %}"
+                                   class="btn btn-outline-warning w-100 alerta-mobile-card__btn">
+                                    Registrar pago
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="alertas-empty-state alertas-empty-state--success">
+                <i class="fas fa-check-circle"></i>
+                <span>No hay pagos que venzan hoy.</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- PRÓXIMAS 1 A 3 DÍAS -->
+    <div class="card shadow-sm mb-4 border-warning">
+        <div class="card-header bg-warning">
+            <strong>Próximas 1 a 3 días</strong>
+        </div>
+        <div class="card-body">
+            {% if alertas_panel_agrupado.urgentes %}
+                {% for unidad in alertas_panel_agrupado.urgentes %}
+                <div style="margin-bottom:18px; border:1px solid #d1d5db; border-radius:14px; overflow:hidden;">
+                    <div style="padding:14px 16px; background:#111827; color:#ffffff;">
+                        <div style="font-size:18px; font-weight:bold;">{{ unidad.unidad }}</div>
+                        <div style="margin-top:4px; font-size:13px; color:#d1d5db;">
+                            {{ unidad.cantidad }} compromiso(s) · Saldo pendiente total: {{ unidad.saldo_total|clp }}
+                        </div>
+                    </div>
+
+                    {% for grupo in unidad.categorias %}
+                    <div style="border-top:1px solid #e5e7eb;">
+                        <div style="padding:12px 14px; background:#fefce8; border-bottom:1px solid #e5e7eb;">
+                            <div style="font-size:16px; font-weight:bold; color:#854d0e;">{{ grupo.categoria }}</div>
+                            <div style="margin-top:4px; font-size:13px; color:#854d0e;">
+                                {{ grupo.cantidad }} compromiso(s) · Saldo pendiente: {{ grupo.saldo_total|clp }}
+                            </div>
+                        </div>
+
+                        <div class="alertas-table-desktop">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0 alertas-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 120px;">Fecha</th>
+                                            <th>Concepto</th>
+                                            <th class="text-end" style="width: 150px;">Monto evento</th>
+                                            <th class="text-end" style="width: 160px;">Pagado acumulado</th>
+                                            <th class="text-end" style="width: 170px;">Saldo pendiente real</th>
+                                            <th style="width: 130px;">Prioridad</th>
+                                            <th style="width: 180px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for e in grupo.eventos %}
+                                        <tr style="background: {{ e.prioridad_fila_bg }};">
+                                            <td>{{ e.fecha|date:"d-m-Y" }}</td>
+                                            <td>
+                                                <div class="fw-semibold">{{ e.nombre }}</div>
+                                                <div class="small" style="color: {{ e.prioridad_fila_text }};">
+                                                    Estado real: {{ e.estado_compromiso }} · Eventos pendientes: {{ e.cantidad_eventos_pendientes }}
+                                                </div>
+                                            </td>
+                                            <td class="text-end">{{ e.monto_evento|clp }}</td>
+                                            <td class="text-end">{{ e.pagado_acumulado|clp }}</td>
+                                            <td class="text-end fw-semibold">{{ e.saldo_pendiente_real|clp }}</td>
+                                            <td>
+                                                <span class="badge" style="background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                                    {{ e.prioridad_label }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next={% url 'alertas_financieras' %}" class="btn btn-sm btn-outline-warning">
+                                                    Registrar pago
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="alertas-cards-mobile">
+                            {% for e in grupo.eventos %}
+                            <div class="alerta-mobile-card alerta-mobile-card--warning" style="background: {{ e.prioridad_fila_bg }};">
+                                <div class="alerta-mobile-card__top">
+                                    <span class="alerta-mobile-card__chip" style="background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                        {{ e.prioridad_label }}
+                                    </span>
+                                    <span class="alerta-mobile-card__date">{{ e.fecha|date:"d-m-Y" }}</span>
+                                </div>
+
+                                <h4 class="alerta-mobile-card__title">{{ e.nombre }}</h4>
+
+                                <div class="alerta-mobile-card__subtitle" style="color: {{ e.prioridad_fila_text }};">
+                                    Unidad: {{ unidad.unidad }} · Categoría: {{ grupo.categoria }} · Estado real: {{ e.estado_compromiso }} · Eventos pendientes: {{ e.cantidad_eventos_pendientes }}
+                                </div>
+
+                                <div class="alerta-mobile-card__grid">
+                                    <div class="alerta-mobile-card__item">
+                                        <span class="label">Monto evento</span>
+                                        <span class="value">{{ e.monto_evento|clp }}</span>
+                                    </div>
+                                    <div class="alerta-mobile-card__item">
+                                        <span class="label">Pagado acumulado</span>
+                                        <span class="value value-ok">{{ e.pagado_acumulado|clp }}</span>
+                                    </div>
+                                    <div class="alerta-mobile-card__item alerta-mobile-card__item--full">
+                                        <span class="label">Saldo pendiente real</span>
+                                        <span class="value value-warning">{{ e.saldo_pendiente_real|clp }}</span>
+                                    </div>
+                                </div>
+
+                                <a href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next={% url 'alertas_financieras' %}"
+                                   class="btn btn-outline-warning w-100 alerta-mobile-card__btn">
+                                    Registrar pago
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="alertas-empty-state alertas-empty-state--success">
+                <i class="fas fa-check-circle"></i>
+                <span>No hay compromisos en 1 a 3 días.</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- PRÓXIMAS 4 A 7 DÍAS -->
+    <div class="card shadow-sm mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <strong>Próximas (4 a 7 días)</strong>
+        </div>
+        <div class="card-body">
+            {% if alertas_panel_agrupado.proximas %}
+                {% for unidad in alertas_panel_agrupado.proximas %}
+                <div style="margin-bottom:18px; border:1px solid #d1d5db; border-radius:14px; overflow:hidden;">
+                    <div style="padding:14px 16px; background:#111827; color:#ffffff;">
+                        <div style="font-size:18px; font-weight:bold;">{{ unidad.unidad }}</div>
+                        <div style="margin-top:4px; font-size:13px; color:#d1d5db;">
+                            {{ unidad.cantidad }} compromiso(s) · Saldo pendiente total: {{ unidad.saldo_total|clp }}
+                        </div>
+                    </div>
+
+                    {% for grupo in unidad.categorias %}
+                    <div style="border-top:1px solid #e5e7eb;">
+                        <div style="padding:12px 14px; background:#eff6ff; border-bottom:1px solid #e5e7eb;">
+                            <div style="font-size:16px; font-weight:bold; color:#1d4ed8;">{{ grupo.categoria }}</div>
+                            <div style="margin-top:4px; font-size:13px; color:#1d4ed8;">
+                                {{ grupo.cantidad }} compromiso(s) · Saldo pendiente: {{ grupo.saldo_total|clp }}
+                            </div>
+                        </div>
+
+                        <div class="alertas-table-desktop">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0 alertas-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 120px;">Fecha</th>
+                                            <th>Concepto</th>
+                                            <th class="text-end" style="width: 150px;">Monto evento</th>
+                                            <th class="text-end" style="width: 160px;">Pagado acumulado</th>
+                                            <th class="text-end" style="width: 170px;">Saldo pendiente real</th>
+                                            <th style="width: 130px;">Prioridad</th>
+                                            <th style="width: 180px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for e in grupo.eventos %}
+                                        <tr style="background: {{ e.prioridad_fila_bg }};">
+                                            <td>{{ e.fecha|date:"d-m-Y" }}</td>
+                                            <td>
+                                                <div class="fw-semibold">{{ e.nombre }}</div>
+                                                <div class="small" style="color: {{ e.prioridad_fila_text }};">
+                                                    Estado real: {{ e.estado_compromiso }} · Eventos pendientes: {{ e.cantidad_eventos_pendientes }}
+                                                </div>
+                                            </td>
+                                            <td class="text-end">{{ e.monto_evento|clp }}</td>
+                                            <td class="text-end">{{ e.pagado_acumulado|clp }}</td>
+                                            <td class="text-end fw-semibold">{{ e.saldo_pendiente_real|clp }}</td>
+                                            <td>
+                                                <span class="badge" style="background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                                    {{ e.prioridad_label }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next={% url 'alertas_financieras' %}" class="btn btn-sm btn-outline-primary">
+                                                    Registrar pago
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="alertas-cards-mobile">
+                            {% for e in grupo.eventos %}
+                            <div class="alerta-mobile-card alerta-mobile-card--primary" style="background: {{ e.prioridad_fila_bg }};">
+                                <div class="alerta-mobile-card__top">
+                                    <span class="alerta-mobile-card__chip" style="background: {{ e.prioridad_badge_bg }}; color: {{ e.prioridad_badge_text }};">
+                                        {{ e.prioridad_label }}
+                                    </span>
+                                    <span class="alerta-mobile-card__date">{{ e.fecha|date:"d-m-Y" }}</span>
+                                </div>
+
+                                <h4 class="alerta-mobile-card__title">{{ e.nombre }}</h4>
+
+                                <div class="alerta-mobile-card__subtitle" style="color: {{ e.prioridad_fila_text }};">
+                                    Unidad: {{ unidad.unidad }} · Categoría: {{ grupo.categoria }} · Estado real: {{ e.estado_compromiso }} · Eventos pendientes: {{ e.cantidad_eventos_pendientes }}
+                                </div>
+
+                                <div class="alerta-mobile-card__grid">
+                                    <div class="alerta-mobile-card__item">
+                                        <span class="label">Monto evento</span>
+                                        <span class="value">{{ e.monto_evento|clp }}</span>
+                                    </div>
+                                    <div class="alerta-mobile-card__item">
+                                        <span class="label">Pagado acumulado</span>
+                                        <span class="value value-ok">{{ e.pagado_acumulado|clp }}</span>
+                                    </div>
+                                    <div class="alerta-mobile-card__item alerta-mobile-card__item--full">
+                                        <span class="label">Saldo pendiente real</span>
+                                        <span class="value value-primary">{{ e.saldo_pendiente_real|clp }}</span>
+                                    </div>
+                                </div>
+
+                                <a href="{% url 'pagos_real_crear' %}?pago_id={{ e.pago_id }}&next={% url 'alertas_financieras' %}"
+                                   class="btn btn-outline-primary w-100 alerta-mobile-card__btn">
+                                    Registrar pago
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="alertas-empty-state alertas-empty-state--success">
+                <i class="fas fa-check-circle"></i>
+                <span>No hay compromisos en 4 a 7 días.</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

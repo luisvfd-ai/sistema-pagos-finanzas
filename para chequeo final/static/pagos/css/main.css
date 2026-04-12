@@ -1,0 +1,477 @@
+:root {
+    --bg: #f4f6fb;
+    --sidebar: #111827;
+    --sidebar-hover: #1f2937;
+    --primary: #4f46e5;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --success: #16a34a;
+    --warning: #f59e0b;
+    --danger: #dc2626;
+}
+
+body {
+    background: var(--bg);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    color: var(--text);
+    overflow-x: hidden;
+}
+
+.layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar {
+    width: 240px;
+    background: var(--sidebar);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 12px;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.logo {
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.25;
+    margin-bottom: 14px;
+}
+
+.sidebar nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #cbd5e1;
+    text-decoration: none;
+    padding: 9px 12px;
+    border-radius: 10px;
+    margin-bottom: 3px;
+    transition: .25s ease;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.sidebar nav a:hover {
+    background: var(--sidebar-hover);
+    color: #fff;
+    transform: translateX(4px);
+}
+
+.sidebar hr {
+    border-color: #374151;
+    margin: 8px 0;
+}
+
+/* =========================
+   CONTENT
+========================= */
+
+.content {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: visible;
+}
+
+.topbar {
+    height: 64px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 26px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.05);
+    font-weight: 600;
+    gap: 12px;
+}
+
+.page-content {
+    padding: 28px 32px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+    min-width: 0;
+}
+
+/* =========================
+   TABLAS BASE
+   (conservador, no invasivo)
+========================= */
+
+table {
+    border-collapse: collapse;
+}
+
+table th {
+    background: #f8fafc;
+    padding: 12px;
+    text-align: left;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+table td {
+    padding: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* =========================
+   BADGES BASE
+========================= */
+
+.badge {
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.riesgo-bajo {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.riesgo-medio {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.riesgo-alto {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* =========================
+   ALERTAS TEXTUALES
+========================= */
+
+.alert {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.ok {
+    color: var(--success);
+    font-weight: 600;
+}
+
+/* =========================
+   MENÚ MÓVIL
+========================= */
+
+.mobile-menu-toggle {
+    display: none;
+}
+
+.mobile-menu-wrapper {
+    display: none;
+}
+
+.mobile-menu {
+    margin: 10px 14px 0;
+    border-radius: 14px;
+    padding: 10px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,.06);
+}
+
+.mobile-menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+    text-decoration: none;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.mobile-menu a:hover {
+    background: #f3f4f6;
+}
+
+/* =========================
+   TABLET
+========================= */
+
+@media (max-width: 1200px) {
+    .page-content {
+        padding: 22px 20px;
+    }
+}
+
+/* =========================
+   MOBILE / TABLET COMPACTO
+========================= */
+
+@media (max-width: 992px) {
+    .layout {
+        display: block;
+    }
+
+    .sidebar {
+        display: none !important;
+    }
+
+    .content {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+
+    .topbar {
+        height: auto;
+        min-height: 72px;
+        padding: 12px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+    }
+
+    .page-content {
+        padding: 16px 14px;
+    }
+
+    table th,
+    table td {
+        padding: 10px 8px;
+        font-size: 13px;
+    }
+
+    .btn {
+        font-size: 12px;
+    }
+
+    .mobile-menu-toggle {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .mobile-menu-wrapper {
+        display: block;
+    }
+}
+
+/* =========================
+   CELULAR
+========================= */
+
+@media (max-width: 576px) {
+    .topbar {
+        gap: 6px;
+    }
+
+    .topbar .small {
+        display: block;
+        margin-left: 0 !important;
+    }
+
+    .page-content {
+        padding: 12px 10px;
+    }
+
+    table th,
+    table td {
+        font-size: 12px;
+        padding: 8px 6px;
+    }
+
+    .badge {
+        font-size: 11px;
+        padding: 5px 8px;
+    }
+
+    .mobile-menu {
+        margin: 8px 10px 0;
+    }
+}
+
+/* =========================
+   AYUDA / FAQ
+========================= */
+
+.ayuda-page {
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+.ayuda-hero {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    color: #fff;
+    border-radius: 22px;
+    padding: 28px 30px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .12);
+}
+
+.ayuda-hero__title {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 8px;
+}
+
+.ayuda-hero__subtitle {
+    color: rgba(255,255,255,.82);
+    margin-bottom: 0;
+    max-width: 860px;
+}
+
+.ayuda-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.ayuda-card .card-body {
+    padding: 22px 22px;
+}
+
+.ayuda-card__title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: #111827;
+}
+
+.ayuda-card__text {
+    color: #6b7280;
+    margin-bottom: 0;
+}
+
+.ayuda-indice {
+    position: sticky;
+    top: 18px;
+}
+
+.ayuda-indice a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #334155;
+    padding: 10px 12px;
+    border-radius: 12px;
+    margin-bottom: 6px;
+    background: #f8fafc;
+    font-weight: 600;
+    transition: .2s ease;
+}
+
+.ayuda-indice a:hover {
+    background: #eef2ff;
+    color: #312e81;
+}
+
+.ayuda-seccion {
+    scroll-margin-top: 90px;
+}
+
+.ayuda-seccion + .ayuda-seccion {
+    margin-top: 18px;
+}
+
+.ayuda-seccion .card-header {
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    border-radius: 18px 18px 0 0 !important;
+    padding: 16px 20px;
+}
+
+.ayuda-seccion .card-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.ayuda-seccion .card-body {
+    padding: 18px 20px;
+}
+
+.ayuda-seccion ul {
+    margin-bottom: 0;
+    padding-left: 1.1rem;
+}
+
+.ayuda-seccion li + li {
+    margin-top: 8px;
+}
+
+.ayuda-acordeon .accordion-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px !important;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.ayuda-acordeon .accordion-button {
+    font-weight: 700;
+    color: #111827;
+    background: #fff;
+    box-shadow: none !important;
+}
+
+.ayuda-acordeon .accordion-button:not(.collapsed) {
+    background: #eef2ff;
+    color: #312e81;
+}
+
+.ayuda-acordeon .accordion-body {
+    color: #475569;
+    line-height: 1.65;
+}
+
+.ayuda-tip {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+}
+
+.ayuda-tip strong {
+    color: #111827;
+}
+
+@media (max-width: 992px) {
+    .ayuda-hero {
+        padding: 22px 20px;
+        border-radius: 18px;
+    }
+
+    .ayuda-hero__title {
+        font-size: 1.7rem;
+    }
+
+    .ayuda-indice {
+        position: static;
+    }
+}
+
+@media (max-width: 576px) {
+    .ayuda-hero__title {
+        font-size: 1.45rem;
+    }
+
+    .ayuda-card .card-body,
+    .ayuda-seccion .card-body,
+    .ayuda-seccion .card-header {
+        padding: 16px;
+    }
+}

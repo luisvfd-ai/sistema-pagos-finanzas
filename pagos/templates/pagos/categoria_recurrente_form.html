@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo|default:"Categoría recurrente" }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pagos/css/forms.css' %}?v=categorias_form1">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h3 class="mb-4">{{ titulo }}</h3>
+
+    <div class="form-card">
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Nombre</label>
+                    {{ form.nombre }}
+                    {% if form.nombre.errors %}<div class="text-danger small mt-1">{{ form.nombre.errors|join:", " }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Código</label>
+                    {{ form.codigo }}
+                    <div class="form-text">Se normaliza en mayúsculas con guion bajo. Ej: GASTOS_COMUNES</div>
+                    {% if form.codigo.errors %}<div class="text-danger small mt-1">{{ form.codigo.errors|join:", " }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Orden</label>
+                    {{ form.orden }}
+                    {% if form.orden.errors %}<div class="text-danger small mt-1">{{ form.orden.errors|join:", " }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-8">
+                    <div class="form-check mt-4">
+                        {{ form.activa }}
+                        <label class="form-check-label" for="{{ form.activa.id_for_label }}">Categoría activa</label>
+                    </div>
+                    {% if form.activa.errors %}<div class="text-danger small mt-1">{{ form.activa.errors|join:", " }}</div>{% endif %}
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Descripción</label>
+                    {{ form.descripcion }}
+                    {% if form.descripcion.errors %}<div class="text-danger small mt-1">{{ form.descripcion.errors|join:", " }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'categorias_recurrentes_lista' %}" class="btn btn-light">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Guardar categoría</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@ from .models import EventoPago, PagoProgramado, PagoReal
 # HELPERS INTERNOS
 # ==================================================
 
+
 def _sumar_monto(qs):
     return qs.aggregate(
         total=Coalesce(
@@ -22,11 +23,27 @@ def _sumar_monto(qs):
     )['total']
 
 
+
 def _sumar_relacion(objetos, attr='monto'):
     total = Decimal('0.00')
     for obj in objetos:
         total += Decimal(getattr(obj, attr, 0) or 0)
     return total
+
+
+
+def _pagos_programados_operativos_qs():
+    return PagoProgramado.objects.filter(activo=True)
+
+
+
+def _eventos_operativos_qs():
+    return EventoPago.objects.filter(pago__activo=True)
+
+
+
+def _pagos_reales_operativos_qs():
+    return PagoReal.objects.filter(pago__activo=True)
 
 
 
@@ -45,6 +62,33 @@ def _unidad_pago_info(pago):
         'unidad_negocio_label': label or 'Otros',
     }
 
+
+
+def _modo_programacion_info(pago):
+    modo = getattr(pago, 'modo_programacion', 'CUOTAS') or 'CUOTAS'
+    try:
+        modo_label = pago.get_modo_programacion_display()
+    except Exception:
+        modo_label = modo.title()
+
+    try:
+        categoria = pago.categoria_recurrente_codigo_actual() if hasattr(pago, 'categoria_recurrente_codigo_actual') else (getattr(pago, 'categoria_recurrente', '') or '')
+    except Exception:
+        categoria = getattr(pago, 'categoria_recurrente', '') or ''
+    try:
+        categoria_label = pago.categoria_recurrente_label_actual() if categoria and hasattr(pago, 'categoria_recurrente_label_actual') else ''
+    except Exception:
+        categoria_label = categoria.replace('_', ' ').title() if categoria else ''
+
+    return {
+        'modo_programacion': modo,
+        'modo_programacion_label': modo_label,
+        'categoria_recurrente': categoria,
+        'categoria_recurrente_label': categoria_label,
+    }
+
+
+
 def _resumen_compromiso_alerta(pago, eventos_pendientes):
     eventos_pendientes = sorted(eventos_pendientes, key=lambda e: e.fecha)
     primer_evento = eventos_pendientes[0]
@@ -52,21 +96,43 @@ def _resumen_compromiso_alerta(pago, eventos_pendientes):
     eventos_todos = list(pago.eventos.all()) if hasattr(pago, '_prefetched_objects_cache') and 'eventos' in pago._prefetched_objects_cache else list(pago.eventos.all())
     pagos_realizados = list(pago.pagos_realizados.all()) if hasattr(pago, '_prefetched_objects_cache') and 'pagos_realizados' in pago._prefetched_objects_cache else list(pago.pagos_realizados.all())
 
-    total_compromiso = _sumar_relacion(eventos_todos)
-    if total_compromiso <= 0:
-        total_compromiso = Decimal(pago.total_cuotas or 0) * Decimal(pago.monto or 0)
+    total_compromiso_total = _sumar_relacion(eventos_todos)
+    if total_compromiso_total <= 0:
+        if hasattr(pago, 'es_recurrente') and (pago.es_recurrente() or pago.es_unico()):
+            total_compromiso_total = Decimal(pago.monto_evento_recurrente() or 0)
+        else:
+            total_compromiso_total = Decimal(pago.total_cuotas or 0) * Decimal(pago.monto or 0)
 
-    pagado_acumulado = _sumar_relacion(pagos_realizados)
-    saldo_pendiente_real = total_compromiso - pagado_acumulado
-    if saldo_pendiente_real < 0:
-        saldo_pendiente_real = Decimal('0.00')
+    pagado_acumulado_total = _sumar_relacion(pagos_realizados)
+    saldo_pendiente_real_total = total_compromiso_total - pagado_acumulado_total
+    if saldo_pendiente_real_total < 0:
+        saldo_pendiente_real_total = Decimal('0.00')
 
-    if saldo_pendiente_real <= 0:
+    es_recurrente = hasattr(pago, 'es_recurrente') and pago.es_recurrente()
+    es_unico = hasattr(pago, 'es_unico') and pago.es_unico()
+
+    total_compromiso_visible = total_compromiso_total
+    pagado_acumulado_visible = pagado_acumulado_total
+    saldo_pendiente_real_visible = saldo_pendiente_real_total
+
+    if es_recurrente or es_unico:
+        cuota_operativa = _resolver_cuota_operativa(
+            pago=pago,
+            eventos_todos=eventos_todos,
+            pagado_real=pagado_acumulado_total,
+            total_compromiso=total_compromiso_total,
+            saldo_real=saldo_pendiente_real_total,
+        )
+        total_compromiso_visible = _to_decimal(cuota_operativa.get('monto_cuota_actual') or 0)
+        pagado_acumulado_visible = _to_decimal(cuota_operativa.get('abonado_cuota_actual') or 0)
+        saldo_pendiente_real_visible = _to_decimal(cuota_operativa.get('saldo_cuota_actual') or 0)
+
+    if saldo_pendiente_real_visible <= 0:
         estado_compromiso = 'PAGADO'
         porcentaje_pagado = 100
-    elif pagado_acumulado > 0 and total_compromiso > 0:
+    elif pagado_acumulado_visible > 0 and total_compromiso_visible > 0:
         estado_compromiso = 'PARCIAL'
-        porcentaje_pagado = round((pagado_acumulado / total_compromiso) * 100, 2)
+        porcentaje_pagado = round((pagado_acumulado_visible / total_compromiso_visible) * 100, 2)
     else:
         estado_compromiso = 'PENDIENTE'
         porcentaje_pagado = 0
@@ -75,13 +141,20 @@ def _resumen_compromiso_alerta(pago, eventos_pendientes):
         'pago_id': pago.id,
         'nombre': pago.nombre,
         'tipo': pago.tipo,
+        **_modo_programacion_info(pago),
         'unidad_negocio': _unidad_pago_info(pago)['unidad_negocio'],
         'unidad_negocio_label': _unidad_pago_info(pago)['unidad_negocio_label'],
         'fecha': primer_evento.fecha,
         'monto_evento': Decimal(primer_evento.monto or 0),
-        'pagado_acumulado': pagado_acumulado,
-        'saldo_pendiente_real': saldo_pendiente_real,
-        'total_compromiso': total_compromiso,
+        'pagado_acumulado_total': pagado_acumulado_total,
+        'saldo_pendiente_real_total': saldo_pendiente_real_total,
+        'total_compromiso_total': total_compromiso_total,
+        'pagado_acumulado_visible': pagado_acumulado_visible,
+        'saldo_pendiente_real_visible': saldo_pendiente_real_visible,
+        'total_compromiso_visible': total_compromiso_visible,
+        'pagado_acumulado': pagado_acumulado_visible,
+        'saldo_pendiente_real': saldo_pendiente_real_visible,
+        'total_compromiso': total_compromiso_visible,
         'estado_compromiso': estado_compromiso,
         'porcentaje_pagado': porcentaje_pagado,
         'cantidad_eventos_pendientes': len(eventos_pendientes),
@@ -90,13 +163,14 @@ def _resumen_compromiso_alerta(pago, eventos_pendientes):
     }
 
 
+
 def _agrupar_compromisos_por_alerta(limite=None):
     hoy = timezone.now().date()
     fin_3 = hoy + timedelta(days=3)
     fin_7 = hoy + timedelta(days=7)
 
     compromisos = (
-        PagoProgramado.objects
+        _pagos_programados_operativos_qs()
         .filter(eventos__estado='pendiente')
         .prefetch_related('eventos', 'pagos_realizados')
         .distinct()
@@ -139,12 +213,12 @@ def _agrupar_compromisos_por_alerta(limite=None):
     return grupos
 
 
+
 def _sumar_saldos(items):
     total = Decimal('0.00')
     for item in items:
         total += Decimal(item.get('saldo_pendiente_real') or 0)
     return total
-
 
 
 
@@ -155,6 +229,7 @@ def _to_decimal(value):
         return Decimal(str(value))
     except Exception:
         return Decimal('0.00')
+
 
 
 def _estado_cuota_visual(fecha_cuota, saldo_cuota, abonado_cuota):
@@ -175,6 +250,7 @@ def _estado_cuota_visual(fecha_cuota, saldo_cuota, abonado_cuota):
         return 'Parcial', 'warning'
 
     return 'Pendiente', 'danger'
+
 
 
 def _distribuir_pagado_en_eventos(eventos, pagado_real):
@@ -205,8 +281,12 @@ def _distribuir_pagado_en_eventos(eventos, pagado_real):
     return detalle
 
 
+
+
 def _resolver_cuota_operativa(pago, eventos_todos, pagado_real, total_compromiso, saldo_real):
     eventos_ordenados = sorted(eventos_todos, key=lambda e: ((getattr(e, 'fecha', None) or timezone.now().date()), e.id))
+    es_recurrente = hasattr(pago, 'es_recurrente') and pago.es_recurrente()
+    es_unico = hasattr(pago, 'es_unico') and pago.es_unico()
     total_cuotas_ref = max(int(pago.total_cuotas or 0), len(eventos_ordenados), 1)
 
     if eventos_ordenados:
@@ -227,10 +307,17 @@ def _resolver_cuota_operativa(pago, eventos_todos, pagado_real, total_compromiso
             cuota_actual['abonado_cuota'],
         )
 
+        if es_recurrente:
+            cuota_label = 'Mensual'
+        elif es_unico:
+            cuota_label = 'Único'
+        else:
+            cuota_label = f"{cuota_actual['numero_cuota']}/{total_cuotas_ref}"
+
         return {
             'tiene_evento_operativo': True,
             'cuota_actual_numero': cuota_actual['numero_cuota'],
-            'cuota_actual_label': f"{cuota_actual['numero_cuota']}/{total_cuotas_ref}",
+            'cuota_actual_label': cuota_label,
             'fecha_cuota_actual': cuota_actual['fecha_cuota'],
             'monto_cuota_actual': cuota_actual['monto_cuota'],
             'abonado_cuota_actual': cuota_actual['abonado_cuota'],
@@ -239,7 +326,7 @@ def _resolver_cuota_operativa(pago, eventos_todos, pagado_real, total_compromiso
             'estado_cuota_clase': estado_clase,
         }
 
-    monto_unitario = _to_decimal(getattr(pago, 'monto', 0))
+    monto_unitario = _to_decimal(pago.monto_evento_recurrente() if (es_recurrente or es_unico) else getattr(pago, 'monto', 0))
     total_cuotas_plan = int(pago.total_cuotas or 0) or 1
 
     if monto_unitario > 0:
@@ -274,10 +361,17 @@ def _resolver_cuota_operativa(pago, eventos_todos, pagado_real, total_compromiso
         abonado_cuota,
     )
 
+    if es_recurrente:
+        cuota_label = 'Mensual'
+    elif es_unico:
+        cuota_label = 'Único'
+    else:
+        cuota_label = f"{cuota_numero}/{total_cuotas_plan}"
+
     return {
         'tiene_evento_operativo': False,
         'cuota_actual_numero': cuota_numero,
-        'cuota_actual_label': f"{cuota_numero}/{total_cuotas_plan}",
+        'cuota_actual_label': cuota_label,
         'fecha_cuota_actual': getattr(pago, 'fecha_inicio', None),
         'monto_cuota_actual': monto_cuota,
         'abonado_cuota_actual': abonado_cuota,
@@ -291,59 +385,123 @@ def _resumen_compromiso_financiero(pago):
     eventos_todos = list(pago.eventos.all()) if hasattr(pago, '_prefetched_objects_cache') and 'eventos' in pago._prefetched_objects_cache else list(pago.eventos.all())
     pagos_realizados = list(pago.pagos_realizados.all()) if hasattr(pago, '_prefetched_objects_cache') and 'pagos_realizados' in pago._prefetched_objects_cache else list(pago.pagos_realizados.all())
 
-    total_compromiso = _sumar_relacion(eventos_todos)
-    if total_compromiso <= 0:
-        total_compromiso = Decimal(pago.total_cuotas or 0) * Decimal(pago.monto or 0)
+    total_compromiso_total = _sumar_relacion(eventos_todos)
+    if total_compromiso_total <= 0:
+        if hasattr(pago, 'es_recurrente') and (pago.es_recurrente() or pago.es_unico()):
+            total_compromiso_total = _to_decimal(pago.monto_evento_recurrente() or 0)
+        else:
+            total_compromiso_total = Decimal(pago.total_cuotas or 0) * Decimal(pago.monto or 0)
 
-    pagado_real = _sumar_relacion(pagos_realizados)
-    saldo_real = total_compromiso - pagado_real
-    if saldo_real < 0:
-        saldo_real = Decimal('0.00')
-
-    if total_compromiso <= 0:
-        estado = 'PENDIENTE'
-        porcentaje_pagado = 0
-    elif saldo_real <= 0:
-        estado = 'PAGADO'
-        porcentaje_pagado = 100
-    elif pagado_real > 0:
-        estado = 'PARCIAL'
-        porcentaje_pagado = round((pagado_real / total_compromiso) * 100, 2)
-    else:
-        estado = 'PENDIENTE'
-        porcentaje_pagado = 0
+    pagado_real_total = _sumar_relacion(pagos_realizados)
+    saldo_real_total = total_compromiso_total - pagado_real_total
+    if saldo_real_total < 0:
+        saldo_real_total = Decimal('0.00')
 
     cuota_operativa = _resolver_cuota_operativa(
         pago=pago,
         eventos_todos=eventos_todos,
-        pagado_real=pagado_real,
-        total_compromiso=total_compromiso,
-        saldo_real=saldo_real,
+        pagado_real=pagado_real_total,
+        total_compromiso=total_compromiso_total,
+        saldo_real=saldo_real_total,
     )
+
+    es_recurrente = hasattr(pago, 'es_recurrente') and pago.es_recurrente()
+    es_unico = hasattr(pago, 'es_unico') and pago.es_unico()
+
+    total_visible_operativo = total_compromiso_total
+    pagado_visible_operativo = pagado_real_total
+    saldo_visible_operativo = saldo_real_total
+    porcentaje_visible = 0
+    porcentaje_pagado_total = 0
+
+    if total_compromiso_total > 0:
+        porcentaje_pagado_total = round((pagado_real_total / total_compromiso_total) * 100, 2)
+
+    if es_recurrente or es_unico:
+        total_visible_operativo = _to_decimal(cuota_operativa.get('monto_cuota_actual') or 0)
+        pagado_visible_operativo = _to_decimal(cuota_operativa.get('abonado_cuota_actual') or 0)
+        saldo_visible_operativo = _to_decimal(cuota_operativa.get('saldo_cuota_actual') or 0)
+
+        if saldo_visible_operativo <= 0:
+            estado = 'PAGADO'
+            porcentaje_visible = 100
+        elif pagado_visible_operativo > 0 and total_visible_operativo > 0:
+            estado = 'PARCIAL'
+            porcentaje_visible = round((pagado_visible_operativo / total_visible_operativo) * 100, 2)
+        else:
+            estado = 'PENDIENTE'
+            porcentaje_visible = 0
+
+        if es_recurrente:
+            saldo_visible_label = 'Pendiente del mes'
+            proyeccion_horizonte = saldo_real_total
+            proyeccion_horizonte_label = 'Proyección horizonte'
+        else:
+            saldo_visible_label = 'Saldo del evento único'
+            proyeccion_horizonte = saldo_real_total
+            proyeccion_horizonte_label = 'Saldo total estructural'
+    else:
+        if total_compromiso_total <= 0:
+            estado = 'PENDIENTE'
+            porcentaje_visible = 0
+        elif saldo_real_total <= 0:
+            estado = 'PAGADO'
+            porcentaje_visible = 100
+        elif pagado_real_total > 0:
+            estado = 'PARCIAL'
+            porcentaje_visible = round((pagado_real_total / total_compromiso_total) * 100, 2)
+        else:
+            estado = 'PENDIENTE'
+            porcentaje_visible = 0
+
+        saldo_visible_label = 'Saldo total pendiente'
+        proyeccion_horizonte = saldo_real_total
+        proyeccion_horizonte_label = 'Saldo total pendiente'
 
     return {
         'id': pago.id,
         'fecha_inicio': pago.fecha_inicio,
         'nombre': pago.nombre,
         'tipo': pago.tipo,
+        **_modo_programacion_info(pago),
         'unidad_negocio': _unidad_pago_info(pago)['unidad_negocio'],
         'unidad_negocio_label': _unidad_pago_info(pago)['unidad_negocio_label'],
         'activo': pago.activo,
         'total_cuotas': pago.total_cuotas,
         'cuotas_restantes': pago.cuotas_restantes,
-        'total_compromiso': total_compromiso,
-        'pagado_real': pagado_real,
-        'saldo_real': saldo_real,
+        'total_compromiso_total': total_compromiso_total,
+        'pagado_real_total': pagado_real_total,
+        'saldo_real_total': saldo_real_total,
+        'total_visible_operativo': total_visible_operativo,
+        'pagado_visible_operativo': pagado_visible_operativo,
+        'saldo_visible_operativo': saldo_visible_operativo,
+        'saldo_visible_label': saldo_visible_label,
+        'proyeccion_horizonte': proyeccion_horizonte,
+        'proyeccion_horizonte_label': proyeccion_horizonte_label,
+        'total_compromiso': total_compromiso_total,
+        'pagado_real': pagado_real_total,
+        'saldo_real': saldo_real_total,
+        'saldo_visible': saldo_visible_operativo,
+        'es_recurrente': es_recurrente,
+        'es_unico': es_unico,
         'estado_real': estado,
-        'porcentaje_pagado': porcentaje_pagado,
+        'porcentaje_pagado_total': porcentaje_pagado_total,
+        'porcentaje_pagado': porcentaje_visible,
+        'porcentaje_visible': porcentaje_visible,
         **cuota_operativa,
     }
 
 
+
 def listar_compromisos_financieros(include_pagados=True, q=None, tipo=None, estado=None, activo=None):
+    compromisos_qs = PagoProgramado.objects.all()
+    if activo in (True, False):
+        compromisos_qs = compromisos_qs.filter(activo=activo)
+    else:
+        compromisos_qs = compromisos_qs.filter(activo=True)
+
     compromisos = (
-        PagoProgramado.objects
-        .all()
+        compromisos_qs
         .prefetch_related('eventos', 'pagos_realizados')
         .order_by('-fecha_inicio', '-id')
     )
@@ -364,8 +522,6 @@ def listar_compromisos_financieros(include_pagados=True, q=None, tipo=None, esta
             continue
         if estado and item['estado_real'] != estado:
             continue
-        if activo in (True, False) and bool(item['activo']) != activo:
-            continue
 
         items.append(item)
 
@@ -374,10 +530,12 @@ def listar_compromisos_financieros(include_pagados=True, q=None, tipo=None, esta
         orden_estado.get(item['estado_real'], 9),
         item.get('fecha_cuota_actual') or item['fecha_inicio'] or timezone.now().date(),
         -(item.get('saldo_cuota_actual') or Decimal('0.00')),
+        -(item.get('saldo_visible') or Decimal('0.00')),
         -(item['saldo_real'] or Decimal('0.00')),
         (item['nombre'] or '').lower(),
     ))
     return items
+
 
 
 def resumen_estados_compromisos():
@@ -387,9 +545,9 @@ def resumen_estados_compromisos():
     parciales = [i for i in items if i['estado_real'] == 'PARCIAL']
     pagados = [i for i in items if i['estado_real'] == 'PAGADO']
 
-    def _sumar(items, key):
+    def _sumar(items_local, key):
         total = Decimal('0.00')
-        for item in items:
+        for item in items_local:
             total += Decimal(item.get(key) or 0)
         return total
 
@@ -402,6 +560,8 @@ def resumen_estados_compromisos():
         'pagados_total': _sumar(pagados, 'total_compromiso'),
         'total_compromisos': len(items),
     }
+
+
 
 def resumen_compromisos_por_unidad(items=None):
     if items is None:
@@ -443,15 +603,153 @@ def resumen_compromisos_por_unidad(items=None):
     return resultado
 
 
+def resumen_recurrentes_por_categoria(items=None):
+    if items is None:
+        items = listar_compromisos_financieros(include_pagados=True)
+
+    grupos = {}
+    for item in items:
+        modo = (item.get('modo_programacion') or '').upper()
+        categoria = item.get('categoria_recurrente') or ''
+        categoria_label = item.get('categoria_recurrente_label') or 'Sin categoría'
+        if modo != 'RECURRENTE' or not categoria:
+            continue
+
+        key = categoria
+        if key not in grupos:
+            grupos[key] = {
+                'categoria_recurrente': categoria,
+                'categoria_recurrente_label': categoria_label,
+                'cantidad': 0,
+                'saldo_visible_total': Decimal('0.00'),
+                'proyeccion_horizonte_total': Decimal('0.00'),
+                'pendientes': 0,
+                'parciales': 0,
+                'pagados': 0,
+            }
+
+        grupos[key]['cantidad'] += 1
+        grupos[key]['saldo_visible_total'] += Decimal(item.get('saldo_visible') or item.get('saldo_real') or 0)
+        grupos[key]['proyeccion_horizonte_total'] += Decimal(item.get('proyeccion_horizonte') or 0)
+
+        estado = item.get('estado_real')
+        if estado == 'PENDIENTE':
+            grupos[key]['pendientes'] += 1
+        elif estado == 'PARCIAL':
+            grupos[key]['parciales'] += 1
+        elif estado == 'PAGADO':
+            grupos[key]['pagados'] += 1
+
+    resultado = list(grupos.values())
+    resultado.sort(key=lambda x: (-x['saldo_visible_total'], x['categoria_recurrente_label'].lower()))
+    return resultado
+
+
+def resumen_recurrentes_por_unidad_categoria(items=None):
+    if items is None:
+        items = listar_compromisos_financieros(include_pagados=True)
+
+    grupos = {}
+    for item in items:
+        modo = (item.get('modo_programacion') or '').upper()
+        categoria = item.get('categoria_recurrente') or ''
+        categoria_label = item.get('categoria_recurrente_label') or 'Sin categoría'
+        unidad = item.get('unidad_negocio') or 'otros'
+        unidad_label = item.get('unidad_negocio_label') or 'Otros'
+
+        if modo != 'RECURRENTE' or not categoria:
+            continue
+
+        key = (unidad, categoria)
+        if key not in grupos:
+            grupos[key] = {
+                'unidad_negocio': unidad,
+                'unidad_negocio_label': unidad_label,
+                'categoria_recurrente': categoria,
+                'categoria_recurrente_label': categoria_label,
+                'cantidad': 0,
+                'saldo_visible_total': Decimal('0.00'),
+                'proyeccion_horizonte_total': Decimal('0.00'),
+                'pendientes': 0,
+                'parciales': 0,
+                'pagados': 0,
+            }
+
+        grupos[key]['cantidad'] += 1
+        grupos[key]['saldo_visible_total'] += Decimal(item.get('saldo_visible') or item.get('saldo_real') or 0)
+        grupos[key]['proyeccion_horizonte_total'] += Decimal(item.get('proyeccion_horizonte') or 0)
+
+        estado = item.get('estado_real')
+        if estado == 'PENDIENTE':
+            grupos[key]['pendientes'] += 1
+        elif estado == 'PARCIAL':
+            grupos[key]['parciales'] += 1
+        elif estado == 'PAGADO':
+            grupos[key]['pagados'] += 1
+
+    resultado = list(grupos.values())
+    resultado.sort(key=lambda x: (-x['saldo_visible_total'], x['unidad_negocio_label'].lower(), x['categoria_recurrente_label'].lower()))
+    return resultado
+
+
+def resumen_recurrentes_por_categoria(items=None):
+    if items is None:
+        items = listar_compromisos_financieros(include_pagados=True)
+
+    grupos = {}
+    for item in items:
+        if (item.get('modo_programacion') or 'CUOTAS') != 'RECURRENTE':
+            continue
+
+        categoria = item.get('categoria_recurrente') or 'OTRO'
+        categoria_label = item.get('categoria_recurrente_label') or 'Otro'
+
+        if categoria not in grupos:
+            grupos[categoria] = {
+                'categoria_recurrente': categoria,
+                'categoria_recurrente_label': categoria_label,
+                'cantidad': 0,
+                'saldo_visible_total': Decimal('0.00'),
+                'proyeccion_horizonte_total': Decimal('0.00'),
+                'pagados': 0,
+                'parciales': 0,
+                'pendientes': 0,
+            }
+
+        grupos[categoria]['cantidad'] += 1
+        grupos[categoria]['saldo_visible_total'] += Decimal(item.get('saldo_visible') or 0)
+        grupos[categoria]['proyeccion_horizonte_total'] += Decimal(item.get('proyeccion_horizonte') or 0)
+
+        estado = item.get('estado_real')
+        if estado == 'PAGADO':
+            grupos[categoria]['pagados'] += 1
+        elif estado == 'PARCIAL':
+            grupos[categoria]['parciales'] += 1
+        else:
+            grupos[categoria]['pendientes'] += 1
+
+    resultado = [
+        grupo for grupo in grupos.values()
+        if grupo['saldo_visible_total'] > 0 or grupo['proyeccion_horizonte_total'] > 0 or grupo['cantidad'] > 0
+    ]
+    resultado.sort(key=lambda x: (-x['proyeccion_horizonte_total'], -x['saldo_visible_total'], x['categoria_recurrente_label'].lower()))
+    return resultado
+
+
+
 # ==================================================
 # KPIs FINANCIEROS EJECUTIVOS (REALIDAD FINANCIERA)
 # ==================================================
+
 
 def obtener_kpis_financieros():
     hoy = timezone.now().date()
     fin_30 = hoy + timedelta(days=30)
 
-    total_plan = EventoPago.objects.aggregate(
+    eventos_qs = _eventos_operativos_qs()
+    pagos_qs = _pagos_reales_operativos_qs()
+
+    total_plan = eventos_qs.aggregate(
         total=Coalesce(
             Sum('monto'),
             Value(Decimal('0.00')),
@@ -459,7 +757,7 @@ def obtener_kpis_financieros():
         )
     )['total']
 
-    saldo_pendiente_eventos = EventoPago.objects.filter(
+    saldo_pendiente_eventos = eventos_qs.filter(
         estado='pendiente'
     ).aggregate(
         total=Coalesce(
@@ -469,7 +767,7 @@ def obtener_kpis_financieros():
         )
     )['total']
 
-    total_pagado = PagoReal.objects.aggregate(
+    total_pagado = pagos_qs.aggregate(
         total=Coalesce(
             Sum('monto'),
             Value(Decimal('0.00')),
@@ -481,7 +779,7 @@ def obtener_kpis_financieros():
     if total_adeudado_real < 0:
         total_adeudado_real = Decimal('0.00')
 
-    flujo_futuro = EventoPago.objects.filter(
+    flujo_futuro = eventos_qs.filter(
         estado='pendiente',
         fecha__gte=hoy
     ).aggregate(
@@ -492,7 +790,7 @@ def obtener_kpis_financieros():
         )
     )['total']
 
-    total_proximos_30 = EventoPago.objects.filter(
+    total_proximos_30 = eventos_qs.filter(
         estado='pendiente',
         fecha__range=[hoy, fin_30]
     ).aggregate(
@@ -503,11 +801,11 @@ def obtener_kpis_financieros():
         )
     )['total']
 
-    cantidad_eventos = EventoPago.objects.filter(
+    cantidad_eventos = eventos_qs.filter(
         estado='pendiente'
     ).count()
 
-    monto_vencido = EventoPago.objects.filter(
+    monto_vencido = eventos_qs.filter(
         estado='pendiente',
         fecha__lt=hoy
     ).aggregate(
@@ -518,7 +816,7 @@ def obtener_kpis_financieros():
         )
     )['total']
 
-    cuotas_vencidas = EventoPago.objects.filter(
+    cuotas_vencidas = eventos_qs.filter(
         estado='pendiente',
         fecha__lt=hoy
     ).count()
@@ -540,17 +838,20 @@ def obtener_kpis_financieros():
 # FLUJO PROYECTADO PARA CHART
 # ==================================================
 
+
 def flujo_proyectado_mensual_chart(meses=6):
     hoy = timezone.now().date().replace(day=1)
 
     labels = []
     valores = []
 
+    eventos_qs = _eventos_operativos_qs()
+
     for i in range(meses):
         inicio = (hoy + timedelta(days=32 * i)).replace(day=1)
         fin = (inicio.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
 
-        total = EventoPago.objects.filter(
+        total = eventos_qs.filter(
             fecha__range=[inicio, fin],
             estado='pendiente'
         ).aggregate(
@@ -574,15 +875,17 @@ def flujo_proyectado_mensual_chart(meses=6):
 # RIESGO FINANCIERO EJECUTIVO
 # ==================================================
 
+
 def calcular_riesgo_financiero():
     hoy = timezone.now().date()
+    eventos_qs = _eventos_operativos_qs()
 
-    vencidos = EventoPago.objects.filter(
+    vencidos = eventos_qs.filter(
         estado='pendiente',
         fecha__lt=hoy
     ).count()
 
-    proximos = EventoPago.objects.filter(
+    proximos = eventos_qs.filter(
         estado='pendiente',
         fecha__range=[hoy, hoy + timedelta(days=3)]
     ).count()
@@ -619,45 +922,50 @@ def calcular_riesgo_financiero():
 # EVENTOS CRÍTICOS
 # ==================================================
 
+
 def eventos_criticos(dias=7):
     hoy = timezone.now().date()
     limite = hoy + timedelta(days=dias)
 
-    return EventoPago.objects.filter(
+    return _eventos_operativos_qs().filter(
         estado='pendiente',
         fecha__lte=limite
-    ).select_related('pago').order_by('fecha')
+    ).select_related('pago', 'pago__unidad_negocio_ref').order_by('fecha')
 
 
 # ==================================================
 # EVENTOS VENCIDOS
 # ==================================================
 
+
 def eventos_vencidos():
     hoy = timezone.now().date()
 
-    return EventoPago.objects.filter(
+    return _eventos_operativos_qs().filter(
         estado='pendiente',
         fecha__lt=hoy
-    ).select_related('pago').order_by('fecha')
+    ).select_related('pago', 'pago__unidad_negocio_ref').order_by('fecha')
 
 
 # ==================================================
 # EVENTOS PRÓXIMOS (7 DÍAS)
 # ==================================================
 
+
 def eventos_proximos(dias=7):
     hoy = timezone.now().date()
     limite = hoy + timedelta(days=dias)
 
-    return EventoPago.objects.filter(
+    return _eventos_operativos_qs().filter(
         estado='pendiente',
         fecha__range=[hoy, limite]
-    ).select_related('pago').order_by('fecha')
+    ).select_related('pago', 'pago__unidad_negocio_ref').order_by('fecha')
+
 
 # ==================================================
 # EVENTOS AGRUPADOS POR UNIDAD (DASHBOARD)
 # ==================================================
+
 
 def _unidad_evento_dashboard(evento):
     pago = getattr(evento, 'pago', None)
@@ -668,6 +976,7 @@ def _unidad_evento_dashboard(evento):
         }
 
     return _unidad_pago_info(pago)
+
 
 
 def _resumen_evento_dashboard(evento):
@@ -683,6 +992,7 @@ def _resumen_evento_dashboard(evento):
         'unidad_negocio': unidad_data['unidad_negocio'],
         'unidad_negocio_label': unidad_data['unidad_negocio_label'],
     }
+
 
 
 def _agrupar_eventos_dashboard_por_unidad(eventos_qs):
@@ -727,16 +1037,20 @@ def _agrupar_eventos_dashboard_por_unidad(eventos_qs):
     return resultado
 
 
+
 def eventos_vencidos_agrupados():
     return _agrupar_eventos_dashboard_por_unidad(eventos_vencidos())
+
 
 
 def eventos_proximos_agrupados(dias=7):
     return _agrupar_eventos_dashboard_por_unidad(eventos_proximos(dias=dias))
 
+
 # ==================================================
 # ALERTAS FINANCIERAS
 # ==================================================
+
 
 def resumen_alertas_financieras():
     panel = _agrupar_compromisos_por_alerta(limite=None)
@@ -752,16 +1066,12 @@ def resumen_alertas_financieras():
     return {
         'total_alertas': total_alertas,
         'total_urgentes': total_urgentes,
-
         'vencidas_count': total_vencidas,
         'vencidas_monto': _sumar_saldos(panel['vencidas']),
-
         'hoy_count': total_hoy,
         'hoy_monto': _sumar_saldos(panel['vencen_hoy']),
-
         'proximas_3_count': total_proximas_3,
         'proximas_3_monto': _sumar_saldos(panel['urgentes']),
-
         'proximas_7_count': total_proximas_7,
         'proximas_7_monto': _sumar_saldos(panel['proximas']),
     }
@@ -774,11 +1084,6 @@ def obtener_panel_alertas_financieras(limite=10):
 
     Cada compromiso aparece solo una vez, asignado al bloque de mayor prioridad
     según su evento pendiente más próximo.
-
-    - vencidas: tiene al menos un evento pendiente vencido
-    - vencen_hoy: su próximo evento pendiente vence hoy
-    - urgentes: su próximo evento pendiente vence entre mañana y +3 días
-    - proximas: su próximo evento pendiente vence entre +4 y +7 días
     """
     return _agrupar_compromisos_por_alerta(limite=limite)
 
@@ -787,12 +1092,13 @@ def obtener_panel_alertas_financieras(limite=10):
 # ALERTAS URGENTES PARA EMAIL
 # ==================================================
 
+
 def _compromisos_urgentes_para_email(dias=2):
     hoy = timezone.now().date()
     limite_fecha = hoy + timedelta(days=dias)
 
     compromisos = (
-        PagoProgramado.objects
+        _pagos_programados_operativos_qs()
         .filter(eventos__estado='pendiente', eventos__fecha__lte=limite_fecha)
         .prefetch_related('eventos', 'pagos_realizados')
         .distinct()
@@ -827,11 +1133,13 @@ def _compromisos_urgentes_para_email(dias=2):
     return items
 
 
+
 def obtener_alertas_urgentes_email(dias=2, limite=200):
     items = _compromisos_urgentes_para_email(dias=dias)
     if limite is not None:
         return items[:limite]
     return items
+
 
 
 def resumen_alertas_urgentes_email(dias=2):
@@ -853,19 +1161,18 @@ def resumen_alertas_urgentes_email(dias=2):
         'total_compromisos': len(items),
         'total_monto': total_saldo,
         'total_saldo_pendiente': total_saldo,
-
         'vencidas_count': len(vencidas),
         'vencidas_monto': vencidas_saldo,
         'vencidas_saldo': vencidas_saldo,
-
         'hoy_count': len(hoy_items),
         'hoy_monto': hoy_saldo,
         'hoy_saldo': hoy_saldo,
-
         'proximas_count': len(proximas),
         'proximas_monto': proximas_saldo,
         'proximas_saldo': proximas_saldo,
     }
+
+
 
 def _categoria_alerta_email(item):
     nombre = str(item.get('nombre') or '').strip().lower()
@@ -899,6 +1206,7 @@ def _categoria_alerta_email(item):
         return 'Fijos operativos'
 
     return 'Otros'
+
 
 
 def agrupar_alertas_urgentes_email_por_categoria(dias=2, limite=200):
