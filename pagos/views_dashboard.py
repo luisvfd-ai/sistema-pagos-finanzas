@@ -3392,6 +3392,7 @@ def pagos_real_editar(request, pk):
 @staff_member_required
 def reportes_financieros(request):
     desde, hasta = _get_rango_fechas_from_request(request)
+    mostrar_reporte = request.method == 'POST'
 
     if request.method == 'POST':
         filtro_unidad_negocio = (request.POST.get('unidad_negocio') or '').strip()
@@ -3558,6 +3559,7 @@ def reportes_financieros(request):
         'proyeccion_data': proyeccion_data,
         'proyeccion_tabla': proyeccion_tabla,
         'analisis_proyeccion': analisis_proyeccion,
+        'mostrar_reporte': mostrar_reporte,
     })
 
 
