@@ -360,6 +360,7 @@ def _build_proyeccion_eventos_queryset(fecha_hasta, unidad_negocio=None, categor
             inicio = max(hoy, fecha_desde)
         except Exception:
             inicio = hoy
+
     qs = (
         EventoPago.objects
         .filter(estado='pendiente', pago__activo=True, fecha__gte=inicio, fecha__lte=fecha_hasta)
@@ -394,6 +395,9 @@ def _build_proyeccion_tabla_desde_eventos(eventos_qs):
         categoria_codigo = ''
         categoria_label = ''
         modo_programacion = 'CUOTAS'
+        modo_programacion_label = 'En cuotas'
+        tipo_deuda = ''
+        tipo_deuda_label = ''
         if pago:
             try:
                 categoria_codigo = pago.categoria_recurrente_codigo_actual() if hasattr(pago, 'categoria_recurrente_codigo_actual') else (getattr(pago, 'categoria_recurrente', '') or '')
@@ -407,12 +411,27 @@ def _build_proyeccion_tabla_desde_eventos(eventos_qs):
                 modo_programacion = (getattr(pago, 'modo_programacion', 'CUOTAS') or 'CUOTAS').strip().upper()
             except Exception:
                 modo_programacion = 'CUOTAS'
+            try:
+                modo_programacion_label = pago.get_modo_programacion_display()
+            except Exception:
+                modo_programacion_label = modo_programacion.replace('_', ' ').title() if modo_programacion else '—'
+            try:
+                tipo_deuda = (getattr(pago, 'tipo', '') or '').strip()
+            except Exception:
+                tipo_deuda = ''
+            try:
+                tipo_deuda_label = pago.get_tipo_display() if tipo_deuda else ''
+            except Exception:
+                tipo_deuda_label = tipo_deuda.replace('_', ' ').title() if tipo_deuda else ''
 
         tabla.append({
             'fecha': evento.fecha,
             'nombre': pago.nombre if pago else '—',
             'pago_id': getattr(pago, 'id', None) if pago else None,
             'modo_programacion': modo_programacion,
+            'modo_programacion_label': modo_programacion_label,
+            'tipo_deuda': tipo_deuda,
+            'tipo_deuda_label': tipo_deuda_label,
             'unidad_negocio': pago.unidad_negocio_codigo_actual() if pago and hasattr(pago, 'unidad_negocio_codigo_actual') else (getattr(pago, 'unidad_negocio', None) or 'otros'),
             'unidad_negocio_label': pago.unidad_negocio_label_actual() if pago and hasattr(pago, 'unidad_negocio_label_actual') else 'Otros',
             'categoria_recurrente': categoria_codigo,
@@ -3410,6 +3429,236 @@ def pagos_real_editar(request, pk):
 # ==================================================
 
 
+def _prioridad_proyeccion(fecha_evento):
+    hoy = timezone.localdate()
+    if not fecha_evento:
+        return 'Sin fecha'
+    delta = (fecha_evento - hoy).days
+    if delta < 0:
+        return 'Vencida'
+    if delta == 0:
+        return 'Hoy'
+    if delta <= 3:
+        return '1 a 3 días'
+    if delta <= 7:
+        return '4 a 7 días'
+    if delta <= 15:
+        return '8 a 15 días'
+    return '16+ días'
+
+
+def _enriquecer_proyeccion_tabla(tabla):
+    enriquecida = []
+    for item in (tabla or []):
+        fila = dict(item)
+        fecha = fila.get('fecha')
+        hoy = timezone.localdate()
+        dias = None
+        if fecha:
+            dias = (fecha - hoy).days
+        fila['dias_para_vencimiento'] = dias
+        fila['prioridad'] = _prioridad_proyeccion(fecha)
+        fila.setdefault('tipo_deuda', '')
+        fila.setdefault('tipo_deuda_label', fila.get('tipo_deuda', '').replace('_', ' ').title() if fila.get('tipo_deuda') else '')
+        fila.setdefault('modo_programacion', 'CUOTAS')
+        fila.setdefault('modo_programacion_label', fila.get('modo_programacion', 'CUOTAS').replace('_', ' ').title())
+        fila.setdefault('categoria_recurrente', '')
+        fila.setdefault('categoria_recurrente_label', '')
+        fila.setdefault('unidad_negocio', 'otros')
+        fila.setdefault('unidad_negocio_label', 'Otros')
+        enriquecida.append(fila)
+    return enriquecida
+
+
+def _build_proyeccion_report_data(*, desde, hasta, filtro_unidad_negocio='', filtro_categoria_recurrente='', filtro_tipo_deuda=''):
+    if filtro_categoria_recurrente or filtro_tipo_deuda:
+        eventos_qs = _build_proyeccion_eventos_queryset(
+            hasta,
+            unidad_negocio=filtro_unidad_negocio or None,
+            categoria_recurrente=filtro_categoria_recurrente or None,
+            tipo_deuda=filtro_tipo_deuda or None,
+            fecha_desde=desde,
+        )
+        proyeccion_tabla = _build_proyeccion_tabla_desde_eventos(eventos_qs)
+        proyeccion_tabla = _enriquecer_proyeccion_tabla(proyeccion_tabla)
+        proyeccion_json = _proyeccion_json_desde_tabla(proyeccion_tabla)
+        proyeccion_data = _resumen_proyeccion_desde_tabla(proyeccion_tabla)
+        analisis_proyeccion = _analisis_proyeccion_desde_tabla(proyeccion_tabla)
+    else:
+        proyeccion_json = generar_proyeccion_json(
+            hasta,
+            unidad_negocio=filtro_unidad_negocio or None,
+            fecha_desde=desde,
+        )
+        proyeccion_data = resumen_proyeccion(
+            hasta,
+            unidad_negocio=filtro_unidad_negocio or None,
+            fecha_desde=desde,
+        )
+        proyeccion_tabla = obtener_proyeccion_hasta_fecha(
+            hasta,
+            unidad_negocio=filtro_unidad_negocio or None,
+            fecha_desde=desde,
+        )
+        proyeccion_tabla = _enriquecer_proyeccion_tabla(proyeccion_tabla)
+        analisis_proyeccion = analisis_proyeccion_recurrentes(
+            hasta,
+            unidad_negocio=filtro_unidad_negocio or None,
+            fecha_desde=desde,
+        )
+    return {
+        'proyeccion_json': proyeccion_json,
+        'proyeccion_data': proyeccion_data,
+        'proyeccion_tabla': proyeccion_tabla,
+        'analisis_proyeccion': analisis_proyeccion,
+    }
+
+
+def _proyeccion_filter_labels(*, desde, hasta, unidad_negocio='', categoria_recurrente='', tipo_deuda=''):
+    tipos_map = {value: label for value, label in getattr(PagoProgramado, 'TIPO_CHOICES', [])}
+    categoria_label = next((c['label'] for c in _get_categorias_recurrentes_disponibles_reportes() if c['value'] == categoria_recurrente), 'Todas') if categoria_recurrente else 'Todas'
+    return {
+        'desde': desde,
+        'hasta': hasta,
+        'unidad_negocio': unidad_negocio_label_from_codigo(unidad_negocio) if unidad_negocio else 'Todas',
+        'categoria_recurrente': categoria_label,
+        'tipo_deuda': tipos_map.get(tipo_deuda, 'Todos') if tipo_deuda else 'Todos',
+    }
+
+
+def _export_proyeccion_csv(tabla, filtros):
+    from django.http import HttpResponse
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="proyeccion_financiera_{filtros["desde"].strftime("%Y%m%d")}_{filtros["hasta"].strftime("%Y%m%d")}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(['Proyección financiera'])
+    writer.writerow(['Generado', timezone.localtime().strftime('%d-%m-%Y %H:%M')])
+    writer.writerow(['Desde', filtros['desde'].strftime('%d-%m-%Y')])
+    writer.writerow(['Hasta', filtros['hasta'].strftime('%d-%m-%Y')])
+    writer.writerow(['Unidad / lugar', filtros['unidad_negocio']])
+    writer.writerow(['Categoría recurrente', filtros['categoria_recurrente']])
+    writer.writerow(['Tipo de deuda', filtros['tipo_deuda']])
+    writer.writerow(['Total registros', len(tabla)])
+    writer.writerow([])
+    writer.writerow(['Fecha', 'Días para vencimiento', 'Prioridad', 'Concepto', 'Unidad', 'Tipo deuda', 'Modo', 'Categoría', 'Monto', 'Acumulado'])
+    for item in tabla:
+        writer.writerow([
+            item['fecha'].strftime('%Y-%m-%d') if item.get('fecha') else '',
+            item.get('dias_para_vencimiento', ''),
+            item.get('prioridad', ''),
+            item.get('nombre', ''),
+            item.get('unidad_negocio_label', ''),
+            item.get('tipo_deuda_label', ''),
+            item.get('modo_programacion_label', ''),
+            item.get('categoria_recurrente_label', ''),
+            str(item.get('monto') or 0),
+            str(item.get('acumulado') or 0),
+        ])
+    return response
+
+
+def _export_proyeccion_xlsx(tabla, filtros):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Proyeccion'
+    ws.append(['Proyección financiera'])
+    ws.append(['Generado', timezone.localtime().strftime('%d-%m-%Y %H:%M')])
+    ws.append(['Desde', filtros['desde'].strftime('%d-%m-%Y')])
+    ws.append(['Hasta', filtros['hasta'].strftime('%d-%m-%Y')])
+    ws.append(['Unidad / lugar', filtros['unidad_negocio']])
+    ws.append(['Categoría recurrente', filtros['categoria_recurrente']])
+    ws.append(['Tipo de deuda', filtros['tipo_deuda']])
+    ws.append([])
+    headers = ['Fecha', 'Días para vencimiento', 'Prioridad', 'Concepto', 'Unidad', 'Tipo deuda', 'Modo', 'Categoría', 'Monto', 'Acumulado']
+    ws.append(headers)
+    header_row = ws.max_row
+    for col in range(1, len(headers)+1):
+        cell = ws.cell(row=header_row, column=col)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    for item in tabla:
+        ws.append([
+            item['fecha'].strftime('%Y-%m-%d') if item.get('fecha') else '',
+            item.get('dias_para_vencimiento', ''),
+            item.get('prioridad', ''),
+            item.get('nombre', ''),
+            item.get('unidad_negocio_label', ''),
+            item.get('tipo_deuda_label', ''),
+            item.get('modo_programacion_label', ''),
+            item.get('categoria_recurrente_label', ''),
+            float(item.get('monto') or 0),
+            float(item.get('acumulado') or 0),
+        ])
+    for r in range(header_row+1, ws.max_row+1):
+        ws.cell(row=r, column=9).number_format = '#,##0.00'
+        ws.cell(row=r, column=10).number_format = '#,##0.00'
+    widths = [12, 18, 16, 34, 20, 18, 16, 20, 14, 14]
+    for i,w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="proyeccion_financiera_{filtros["desde"].strftime("%Y%m%d")}_{filtros["hasta"].strftime("%Y%m%d")}.xlsx"'
+    return response
+
+
+def _export_proyeccion_pdf(tabla, filtros, proyeccion_data=None):
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    from django.http import HttpResponse
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=24, rightMargin=24, topMargin=24, bottomMargin=24)
+    styles = getSampleStyleSheet()
+    story = []
+    story.append(Paragraph(f"<b>Proyección financiera</b> ({filtros['desde'].strftime('%d-%m-%Y')} → {filtros['hasta'].strftime('%d-%m-%Y')})", styles['Title']))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(f"<b>Unidad:</b> {filtros['unidad_negocio']} &nbsp;&nbsp; <b>Categoría:</b> {filtros['categoria_recurrente']} &nbsp;&nbsp; <b>Tipo:</b> {filtros['tipo_deuda']}", styles['Normal']))
+    if proyeccion_data:
+        story.append(Spacer(1, 6))
+        story.append(Paragraph(f"<b>Total proyectado:</b> ${proyeccion_data.get('total_proyectado', 0):,.0f} &nbsp;&nbsp; <b>Eventos:</b> {proyeccion_data.get('cantidad_eventos', 0)}", styles['Normal']))
+    story.append(Spacer(1, 10))
+    data = [['Fecha', 'Días', 'Prioridad', 'Concepto', 'Unidad', 'Tipo', 'Modo', 'Monto', 'Acumulado']]
+    for item in tabla:
+        data.append([
+            item['fecha'].strftime('%Y-%m-%d') if item.get('fecha') else '',
+            item.get('dias_para_vencimiento', ''),
+            item.get('prioridad', ''),
+            item.get('nombre', ''),
+            item.get('unidad_negocio_label', ''),
+            item.get('tipo_deuda_label', ''),
+            item.get('modo_programacion_label', ''),
+            f"${(item.get('monto') or 0):,.0f}",
+            f"${(item.get('acumulado') or 0):,.0f}",
+        ])
+    table = Table(data, colWidths=[72, 45, 68, 170, 85, 70, 70, 75, 82])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#111827')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 9),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (7,1), (8,-1), 'RIGHT'),
+        ('GRID', (0,0), (-1,-1), 0.25, colors.lightgrey),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9FAFB')]),
+    ]))
+    story.append(table)
+    doc.build(story)
+    pdf = buffer.getvalue()
+    buffer.close()
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="proyeccion_financiera_{filtros["desde"].strftime("%Y%m%d")}_{filtros["hasta"].strftime("%Y%m%d")}.pdf"'
+    response.write(pdf)
+    return response
+
+
 @staff_member_required
 def reportes_financieros(request):
     desde, hasta = _get_rango_fechas_from_request(request)
@@ -3445,12 +3694,34 @@ def reportes_financieros(request):
     promedio = (total / Decimal(count)) if count else Decimal('0.00')
 
     export = (request.GET.get('export') or "").lower().strip()
+    export_proyeccion = (request.GET.get('export_proyeccion') or "").lower().strip()
     if request.method == "GET" and export in ("csv", "xlsx", "pdf"):
         if export == "csv":
             return _export_csv(pagos_qs, desde, hasta)
         if export == "xlsx":
             return _export_xlsx(pagos_qs, desde, hasta)
         return _export_pdf(pagos_qs, desde, hasta, total, promedio)
+
+    if request.method == "GET" and export_proyeccion in ("csv", "xlsx", "pdf"):
+        proy = _build_proyeccion_report_data(
+            desde=desde,
+            hasta=hasta,
+            filtro_unidad_negocio=filtro_unidad_negocio,
+            filtro_categoria_recurrente=filtro_categoria_recurrente,
+            filtro_tipo_deuda=filtro_tipo_deuda,
+        )
+        filtros_proyeccion = _proyeccion_filter_labels(
+            desde=desde,
+            hasta=hasta,
+            unidad_negocio=filtro_unidad_negocio,
+            categoria_recurrente=filtro_categoria_recurrente,
+            tipo_deuda=filtro_tipo_deuda,
+        )
+        if export_proyeccion == "csv":
+            return _export_proyeccion_csv(proy['proyeccion_tabla'], filtros_proyeccion)
+        if export_proyeccion == "xlsx":
+            return _export_proyeccion_xlsx(proy['proyeccion_tabla'], filtros_proyeccion)
+        return _export_proyeccion_pdf(proy['proyeccion_tabla'], filtros_proyeccion, proy['proyeccion_data'])
 
     chart_diario_json = "{}"
     chart_metodo_json = "{}"
@@ -3527,42 +3798,17 @@ def reportes_financieros(request):
 
         resumen_unidades_periodo = _resumen_pagos_por_unidad(pagos_qs)
 
-        if filtro_categoria_recurrente or filtro_tipo_deuda:
-            eventos_qs = _build_proyeccion_eventos_queryset(
-                hasta,
-                unidad_negocio=filtro_unidad_negocio or None,
-                categoria_recurrente=filtro_categoria_recurrente or None,
-                tipo_deuda=filtro_tipo_deuda or None,
-                fecha_desde=desde,
-            )
-            proyeccion_tabla = _build_proyeccion_tabla_desde_eventos(eventos_qs)
-            proyeccion_json = _proyeccion_json_desde_tabla(proyeccion_tabla)
-            proyeccion_data = _resumen_proyeccion_desde_tabla(proyeccion_tabla)
-            analisis_proyeccion = _analisis_proyeccion_desde_tabla(proyeccion_tabla)
-        else:
-            proyeccion_json = generar_proyeccion_json(
-                hasta,
-                unidad_negocio=filtro_unidad_negocio or None,
-                fecha_desde=desde
-            )
-
-            proyeccion_data = resumen_proyeccion(
-                hasta,
-                unidad_negocio=filtro_unidad_negocio or None,
-                fecha_desde=desde
-            )
-
-            proyeccion_tabla = obtener_proyeccion_hasta_fecha(
-                hasta,
-                unidad_negocio=filtro_unidad_negocio or None,
-                fecha_desde=desde
-            )
-
-            analisis_proyeccion = analisis_proyeccion_recurrentes(
-                hasta,
-                unidad_negocio=filtro_unidad_negocio or None,
-                fecha_desde=desde
-            )
+        proy = _build_proyeccion_report_data(
+            desde=desde,
+            hasta=hasta,
+            filtro_unidad_negocio=filtro_unidad_negocio,
+            filtro_categoria_recurrente=filtro_categoria_recurrente,
+            filtro_tipo_deuda=filtro_tipo_deuda,
+        )
+        proyeccion_json = proy['proyeccion_json']
+        proyeccion_data = proy['proyeccion_data']
+        proyeccion_tabla = proy['proyeccion_tabla']
+        analisis_proyeccion = proy['analisis_proyeccion']
 
     form = ReportesFiltroForm(initial={
         "fecha_desde": desde,
