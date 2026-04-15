@@ -164,6 +164,39 @@ def obtener_proyeccion_hasta_fecha(fecha_hasta, unidad_negocio=None, fecha_desde
 
         pago = getattr(e, 'pago', None)
 
+        tipo_deuda = ''
+        tipo_deuda_label = ''
+        modo_programacion = 'CUOTAS'
+        modo_programacion_label = 'En cuotas'
+        categoria_recurrente = ''
+        categoria_recurrente_label = ''
+
+        if pago:
+            try:
+                tipo_deuda = (getattr(pago, 'tipo', '') or '').strip()
+            except Exception:
+                tipo_deuda = ''
+            try:
+                tipo_deuda_label = pago.get_tipo_display() if tipo_deuda else ''
+            except Exception:
+                tipo_deuda_label = tipo_deuda.replace('_', ' ').title() if tipo_deuda else ''
+            try:
+                modo_programacion = (getattr(pago, 'modo_programacion', 'CUOTAS') or 'CUOTAS').strip().upper()
+            except Exception:
+                modo_programacion = 'CUOTAS'
+            try:
+                modo_programacion_label = pago.get_modo_programacion_display()
+            except Exception:
+                modo_programacion_label = modo_programacion.replace('_', ' ').title() if modo_programacion else '—'
+            try:
+                categoria_recurrente = pago.categoria_recurrente_codigo_actual() if hasattr(pago, 'categoria_recurrente_codigo_actual') else (getattr(pago, 'categoria_recurrente', '') or '')
+            except Exception:
+                categoria_recurrente = getattr(pago, 'categoria_recurrente', '') or ''
+            try:
+                categoria_recurrente_label = pago.categoria_recurrente_label_actual() if categoria_recurrente and hasattr(pago, 'categoria_recurrente_label_actual') else ''
+            except Exception:
+                categoria_recurrente_label = categoria_recurrente.replace('_', ' ').title() if categoria_recurrente else ''
+
         proyeccion.append({
             'fecha': e.fecha,
             'nombre': pago.nombre if pago else '—',
@@ -173,6 +206,12 @@ def obtener_proyeccion_hasta_fecha(fecha_hasta, unidad_negocio=None, fecha_desde
             'unidad_negocio_label': (
                 pago.unidad_negocio_label_actual() if pago and hasattr(pago, 'unidad_negocio_label_actual') else 'Otros'
             ),
+            'tipo_deuda': tipo_deuda,
+            'tipo_deuda_label': tipo_deuda_label,
+            'modo_programacion': modo_programacion,
+            'modo_programacion_label': modo_programacion_label,
+            'categoria_recurrente': categoria_recurrente,
+            'categoria_recurrente_label': categoria_recurrente_label,
             'monto': monto,
             'acumulado': acumulado
         })
