@@ -41,6 +41,16 @@
                 {% endfor %}
             </div>
             {% endif %}
+            {% if filtro_tipo_deuda %}
+            <div class="report-filter-badge mt-2">
+                Tipo filtrado:
+                {% for t in tipos_deuda_disponibles %}
+                    {% if t.value == filtro_tipo_deuda %}
+                        <strong>{{ t.label }}</strong>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -78,6 +88,16 @@
                 </select>
             </div>
 
+            <div class="filter-field">
+                <label class="form-label">Tipo de deuda</label>
+                <select name="tipo_deuda" class="form-select">
+                    <option value="">Todos</option>
+                    {% for t in tipos_deuda_disponibles %}
+                        <option value="{{ t.value }}" {% if filtro_tipo_deuda == t.value %}selected{% endif %}>{{ t.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
             <div class="filter-actions">
                 <button type="submit" class="btn btn-primary">Generar reporte</button>
             </div>
@@ -105,9 +125,9 @@
                     </div>
 
                     <div class="export-actions">
-                        <a class="btn btn-outline-secondary" href="?export=csv&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}&categoria_recurrente={{ filtro_categoria_recurrente }}">CSV</a>
-                        <a class="btn btn-outline-secondary" href="?export=xlsx&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}&categoria_recurrente={{ filtro_categoria_recurrente }}">Excel</a>
-                        <a class="btn btn-outline-secondary" href="?export=pdf&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}&categoria_recurrente={{ filtro_categoria_recurrente }}">PDF</a>
+                        <a class="btn btn-outline-secondary" href="?export=csv&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}&categoria_recurrente={{ filtro_categoria_recurrente }}&tipo_deuda={{ filtro_tipo_deuda }}">CSV</a>
+                        <a class="btn btn-outline-secondary" href="?export=xlsx&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}&categoria_recurrente={{ filtro_categoria_recurrente }}&tipo_deuda={{ filtro_tipo_deuda }}">Excel</a>
+                        <a class="btn btn-outline-secondary" href="?export=pdf&fecha_desde={{ desde|date:'Y-m-d' }}&fecha_hasta={{ hasta|date:'Y-m-d' }}&unidad_negocio={{ filtro_unidad_negocio }}&categoria_recurrente={{ filtro_categoria_recurrente }}&tipo_deuda={{ filtro_tipo_deuda }}">PDF</a>
                     </div>
                 </div>
             </div>
