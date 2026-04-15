@@ -288,7 +288,7 @@ def _get_rango_fechas_from_request(request):
 
 
 
-def _build_report_queryset(desde, hasta, unidad_negocio=None, categoria_recurrente=None):
+def _build_report_queryset(desde, hasta, unidad_negocio=None, categoria_recurrente=None, tipo_deuda=None):
     qs = (
         PagoReal.objects
         .filter(fecha_pago__range=[desde, hasta], pago__activo=True)
@@ -303,6 +303,10 @@ def _build_report_queryset(desde, hasta, unidad_negocio=None, categoria_recurren
     categoria_recurrente = (categoria_recurrente or '').strip()
     if categoria_recurrente:
         qs = qs.filter(_categoria_recurrente_pago_q(categoria_recurrente))
+
+    tipo_deuda = (tipo_deuda or '').strip()
+    if tipo_deuda:
+        qs = qs.filter(pago__tipo=tipo_deuda)
 
     return qs
 
@@ -327,6 +331,13 @@ def _get_categorias_recurrentes_disponibles_reportes():
     return PagoProgramado.categorias_recurrentes_disponibles()
 
 
+def _get_tipos_deuda_disponibles_reportes():
+    return [
+        {'value': value, 'label': label}
+        for value, label in getattr(PagoProgramado, 'TIPO_CHOICES', [])
+    ]
+
+
 def _categoria_recurrente_pago_q(categoria_codigo):
     categoria_codigo = (categoria_codigo or '').strip()
     if not categoria_codigo:
@@ -341,11 +352,17 @@ def _categoria_recurrente_compromiso_q(categoria_codigo):
     return Q(categoria_recurrente_ref__codigo=categoria_codigo) | Q(categoria_recurrente=categoria_codigo)
 
 
-def _build_proyeccion_eventos_queryset(fecha_hasta, unidad_negocio=None, categoria_recurrente=None):
+def _build_proyeccion_eventos_queryset(fecha_hasta, unidad_negocio=None, categoria_recurrente=None, tipo_deuda=None, fecha_desde=None):
     hoy = timezone.localdate()
+    inicio = hoy
+    if fecha_desde:
+        try:
+            inicio = max(hoy, fecha_desde)
+        except Exception:
+            inicio = hoy
     qs = (
         EventoPago.objects
-        .filter(estado='pendiente', pago__activo=True, fecha__gte=hoy, fecha__lte=fecha_hasta)
+        .filter(estado='pendiente', pago__activo=True, fecha__gte=inicio, fecha__lte=fecha_hasta)
         .select_related('pago')
         .order_by('fecha', 'id')
     )
@@ -357,6 +374,10 @@ def _build_proyeccion_eventos_queryset(fecha_hasta, unidad_negocio=None, categor
     categoria_recurrente = (categoria_recurrente or '').strip()
     if categoria_recurrente:
         qs = qs.filter(_categoria_recurrente_pago_q(categoria_recurrente))
+
+    tipo_deuda = (tipo_deuda or '').strip()
+    if tipo_deuda:
+        qs = qs.filter(pago__tipo=tipo_deuda)
 
     return qs
 
@@ -3392,20 +3413,24 @@ def pagos_real_editar(request, pk):
 @staff_member_required
 def reportes_financieros(request):
     desde, hasta = _get_rango_fechas_from_request(request)
-    mostrar_reporte = request.method == 'POST'
 
     if request.method == 'POST':
         filtro_unidad_negocio = (request.POST.get('unidad_negocio') or '').strip()
         filtro_categoria_recurrente = (request.POST.get('categoria_recurrente') or '').strip()
+        filtro_tipo_deuda = (request.POST.get('tipo_deuda') or '').strip()
     else:
         filtro_unidad_negocio = (request.GET.get('unidad_negocio') or '').strip()
         filtro_categoria_recurrente = (request.GET.get('categoria_recurrente') or '').strip()
+        filtro_tipo_deuda = (request.GET.get('tipo_deuda') or '').strip()
+
+    mostrar_reporte = request.method == 'POST'
 
     pagos_qs = _build_report_queryset(
         desde,
         hasta,
         filtro_unidad_negocio,
         filtro_categoria_recurrente,
+        filtro_tipo_deuda,
     )
 
     total = pagos_qs.aggregate(
@@ -3438,7 +3463,7 @@ def reportes_financieros(request):
     proyeccion_tabla = []
     analisis_proyeccion = None
 
-    if request.method == 'POST':
+    if mostrar_reporte:
         diarios = (
             pagos_qs
             .values('fecha_pago')
@@ -3502,11 +3527,13 @@ def reportes_financieros(request):
 
         resumen_unidades_periodo = _resumen_pagos_por_unidad(pagos_qs)
 
-        if filtro_categoria_recurrente:
+        if filtro_categoria_recurrente or filtro_tipo_deuda:
             eventos_qs = _build_proyeccion_eventos_queryset(
                 hasta,
                 unidad_negocio=filtro_unidad_negocio or None,
                 categoria_recurrente=filtro_categoria_recurrente or None,
+                tipo_deuda=filtro_tipo_deuda or None,
+                fecha_desde=desde,
             )
             proyeccion_tabla = _build_proyeccion_tabla_desde_eventos(eventos_qs)
             proyeccion_json = _proyeccion_json_desde_tabla(proyeccion_tabla)
@@ -3515,22 +3542,26 @@ def reportes_financieros(request):
         else:
             proyeccion_json = generar_proyeccion_json(
                 hasta,
-                unidad_negocio=filtro_unidad_negocio or None
+                unidad_negocio=filtro_unidad_negocio or None,
+                fecha_desde=desde
             )
 
             proyeccion_data = resumen_proyeccion(
                 hasta,
-                unidad_negocio=filtro_unidad_negocio or None
+                unidad_negocio=filtro_unidad_negocio or None,
+                fecha_desde=desde
             )
 
             proyeccion_tabla = obtener_proyeccion_hasta_fecha(
                 hasta,
-                unidad_negocio=filtro_unidad_negocio or None
+                unidad_negocio=filtro_unidad_negocio or None,
+                fecha_desde=desde
             )
 
             analisis_proyeccion = analisis_proyeccion_recurrentes(
                 hasta,
-                unidad_negocio=filtro_unidad_negocio or None
+                unidad_negocio=filtro_unidad_negocio or None,
+                fecha_desde=desde
             )
 
     form = ReportesFiltroForm(initial={
@@ -3546,6 +3577,7 @@ def reportes_financieros(request):
         'desde': desde,
         'hasta': hasta,
         'form': form,
+        'mostrar_reporte': mostrar_reporte,
         'chart_diario_json': chart_diario_json,
         'chart_metodo_json': chart_metodo_json,
         'top_compromisos': top_compromisos,
@@ -3553,13 +3585,14 @@ def reportes_financieros(request):
         'resumen_unidades_periodo': resumen_unidades_periodo,
         'filtro_unidad_negocio': filtro_unidad_negocio,
         'filtro_categoria_recurrente': filtro_categoria_recurrente,
+        'filtro_tipo_deuda': filtro_tipo_deuda,
         'unidades_negocio_disponibles': _get_unidades_negocio_disponibles_reportes(),
         'categorias_recurrentes_disponibles': _get_categorias_recurrentes_disponibles_reportes(),
+        'tipos_deuda_disponibles': _get_tipos_deuda_disponibles_reportes(),
         'proyeccion_json': proyeccion_json,
         'proyeccion_data': proyeccion_data,
         'proyeccion_tabla': proyeccion_tabla,
         'analisis_proyeccion': analisis_proyeccion,
-        'mostrar_reporte': mostrar_reporte,
     })
 
 
