@@ -288,6 +288,81 @@ def _get_rango_fechas_from_request(request):
 
 
 
+def _get_preset_report_config(preset_report):
+    preset = (preset_report or '').strip()
+    if not preset:
+        return None
+
+    hoy = timezone.localdate()
+    inicio_mes = hoy.replace(day=1)
+
+    presets = {
+        'historico_periodo': {
+            'fecha_desde': inicio_mes,
+            'fecha_hasta': hoy,
+            'unidad_negocio': '',
+            'categoria_recurrente': '',
+            'tipo_deuda': '',
+            'reporte_rapido_activo': 'Pagos reales del período',
+            'pregunta_reporte': '¿Qué pagos reales hice en este período?',
+        },
+        'unidad_mayor_pago': {
+            'fecha_desde': inicio_mes,
+            'fecha_hasta': hoy,
+            'unidad_negocio': '',
+            'categoria_recurrente': '',
+            'tipo_deuda': '',
+            'reporte_rapido_activo': 'Unidad con mayor salida de caja',
+            'pregunta_reporte': '¿Qué unidad concentró más pagos?',
+        },
+        'priorizar_futuras_30d': {
+            'fecha_desde': hoy,
+            'fecha_hasta': hoy + timedelta(days=30),
+            'unidad_negocio': '',
+            'categoria_recurrente': '',
+            'tipo_deuda': '',
+            'reporte_rapido_activo': 'Proyección futura priorizada',
+            'pregunta_reporte': '¿Qué obligaciones futuras debo priorizar?',
+        },
+        'creditos_90d': {
+            'fecha_desde': hoy,
+            'fecha_hasta': hoy + timedelta(days=90),
+            'unidad_negocio': '',
+            'categoria_recurrente': '',
+            'tipo_deuda': 'credito',
+            'reporte_rapido_activo': 'Créditos y obligaciones financieras',
+            'pregunta_reporte': '¿Cuánto viene en créditos y obligaciones financieras?',
+        },
+        'recurrentes_categoria_90d': {
+            'fecha_desde': hoy,
+            'fecha_hasta': hoy + timedelta(days=90),
+            'unidad_negocio': '',
+            'categoria_recurrente': '',
+            'tipo_deuda': '',
+            'reporte_rapido_activo': 'Carga recurrente por categoría',
+            'pregunta_reporte': '¿Cuál es mi carga recurrente por categoría?',
+        },
+        'calendario_futuro_12m': {
+            'fecha_desde': hoy,
+            'fecha_hasta': hoy + timedelta(days=365),
+            'unidad_negocio': '',
+            'categoria_recurrente': '',
+            'tipo_deuda': '',
+            'reporte_rapido_activo': 'Calendario futuro de obligaciones',
+            'pregunta_reporte': '¿Cuál es el calendario futuro de obligaciones?',
+        },
+    }
+
+    data = presets.get(preset)
+    if not data:
+        return None
+
+    return {
+        'preset_report': preset,
+        **data,
+    }
+
+
 def _build_report_queryset(desde, hasta, unidad_negocio=None, categoria_recurrente=None, tipo_deuda=None):
     qs = (
         PagoReal.objects
@@ -3672,7 +3747,22 @@ def reportes_financieros(request):
         filtro_categoria_recurrente = (request.GET.get('categoria_recurrente') or '').strip()
         filtro_tipo_deuda = (request.GET.get('tipo_deuda') or '').strip()
 
+    preset_report = (request.GET.get('preset_report') or '').strip()
+    reporte_rapido_activo = ''
+    pregunta_reporte = ''
+
     mostrar_reporte = request.method == 'POST'
+
+    preset_data = _get_preset_report_config(preset_report)
+    if request.method == 'GET' and preset_data:
+        desde = preset_data['fecha_desde']
+        hasta = preset_data['fecha_hasta']
+        filtro_unidad_negocio = preset_data['unidad_negocio']
+        filtro_categoria_recurrente = preset_data['categoria_recurrente']
+        filtro_tipo_deuda = preset_data['tipo_deuda']
+        reporte_rapido_activo = preset_data['reporte_rapido_activo']
+        pregunta_reporte = preset_data['pregunta_reporte']
+        mostrar_reporte = True
 
     pagos_qs = _build_report_queryset(
         desde,
@@ -3733,6 +3823,10 @@ def reportes_financieros(request):
     proyeccion_data = None
     proyeccion_tabla = []
     analisis_proyeccion = None
+
+    if mostrar_reporte and not reporte_rapido_activo and request.method == 'POST':
+        reporte_rapido_activo = 'Reporte personalizado'
+        pregunta_reporte = 'Filtros avanzados aplicados manualmente'
 
     if mostrar_reporte:
         diarios = (
@@ -3839,6 +3933,9 @@ def reportes_financieros(request):
         'proyeccion_data': proyeccion_data,
         'proyeccion_tabla': proyeccion_tabla,
         'analisis_proyeccion': analisis_proyeccion,
+        'preset_report': preset_report,
+        'reporte_rapido_activo': reporte_rapido_activo,
+        'pregunta_reporte': pregunta_reporte,
     })
 
 
