@@ -51,6 +51,94 @@
                 {% endfor %}
             </div>
             {% endif %}
+            {% if reporte_rapido_activo %}
+            <div class="report-filter-badge mt-2 report-filter-badge--quick">
+                Reporte rápido:
+                <strong>{{ reporte_rapido_activo }}</strong>
+                {% if pregunta_reporte %}
+                    <span class="text-muted">— {{ pregunta_reporte }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="report-card report-quick-section">
+        <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+            <div>
+                <h5 class="mb-1">⚡ Reportes rápidos</h5>
+                <div class="text-muted small">
+                    Selecciona una pregunta frecuente y el sistema aplicará los filtros sugeridos automáticamente.
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="report-quick-card">
+                    <div class="report-quick-card__title">Pagos reales del período</div>
+                    <div class="report-quick-card__question">¿Qué pagos reales hice en este período?</div>
+                    <div class="report-quick-card__meta">Histórico · mes actual</div>
+                    <a href="{% url 'reportes_financieros' %}?preset_report=historico_periodo" class="btn btn-outline-primary btn-sm mt-3">
+                        Aplicar reporte
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="report-quick-card">
+                    <div class="report-quick-card__title">Unidad con mayor salida</div>
+                    <div class="report-quick-card__question">¿Qué unidad concentró más pagos?</div>
+                    <div class="report-quick-card__meta">Histórico · mes actual</div>
+                    <a href="{% url 'reportes_financieros' %}?preset_report=unidad_mayor_pago" class="btn btn-outline-primary btn-sm mt-3">
+                        Aplicar reporte
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="report-quick-card">
+                    <div class="report-quick-card__title">Proyección priorizada</div>
+                    <div class="report-quick-card__question">¿Qué obligaciones futuras debo priorizar?</div>
+                    <div class="report-quick-card__meta">Corto plazo · próximos 30 días</div>
+                    <a href="{% url 'reportes_financieros' %}?preset_report=priorizar_futuras_30d" class="btn btn-outline-primary btn-sm mt-3">
+                        Aplicar reporte
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="report-quick-card">
+                    <div class="report-quick-card__title">Créditos y obligaciones</div>
+                    <div class="report-quick-card__question">¿Cuánto viene en créditos y obligaciones financieras?</div>
+                    <div class="report-quick-card__meta">Mediano plazo · próximos 90 días</div>
+                    <a href="{% url 'reportes_financieros' %}?preset_report=creditos_90d" class="btn btn-outline-primary btn-sm mt-3">
+                        Aplicar reporte
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="report-quick-card">
+                    <div class="report-quick-card__title">Recurrentes por categoría</div>
+                    <div class="report-quick-card__question">¿Cuál es mi carga recurrente por categoría?</div>
+                    <div class="report-quick-card__meta">Mediano plazo · próximos 90 días</div>
+                    <a href="{% url 'reportes_financieros' %}?preset_report=recurrentes_categoria_90d" class="btn btn-outline-primary btn-sm mt-3">
+                        Aplicar reporte
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="report-quick-card">
+                    <div class="report-quick-card__title">Calendario futuro</div>
+                    <div class="report-quick-card__question">¿Cuál es el calendario futuro de obligaciones?</div>
+                    <div class="report-quick-card__meta">Largo plazo · próximos 12 meses</div>
+                    <a href="{% url 'reportes_financieros' %}?preset_report=calendario_futuro_12m" class="btn btn-outline-primary btn-sm mt-3">
+                        Aplicar reporte
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
