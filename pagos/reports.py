@@ -50,14 +50,21 @@ def _eventos_pendientes_activos_qs():
     )
 
 
-def _eventos_proyeccion_qs(fecha_hasta, unidad_negocio=None):
+def _eventos_proyeccion_qs(fecha_hasta, unidad_negocio=None, fecha_desde=None):
     """
-    Eventos futuros pendientes para análisis de proyección.
+    Eventos futuros pendientes para análisis de proyección dentro de un rango.
+    El inicio real de la proyección es max(hoy, fecha_desde) cuando ésta se recibe.
     """
     hoy = timezone.now().date()
+    inicio = hoy
+    if fecha_desde:
+        try:
+            inicio = max(hoy, fecha_desde)
+        except Exception:
+            inicio = hoy
     qs = (
         _eventos_pendientes_activos_qs()
-        .filter(fecha__gte=hoy, fecha__lte=fecha_hasta)
+        .filter(fecha__gte=inicio, fecha__lte=fecha_hasta)
         .order_by('fecha', 'id')
     )
 
@@ -246,10 +253,11 @@ def dashboard_financiero(desde, hasta):
 # PROYECCION
 # ========================
 
-def generar_proyeccion_json(fecha_hasta, unidad_negocio=None):
+def generar_proyeccion_json(fecha_hasta, unidad_negocio=None, fecha_desde=None):
     data = obtener_proyeccion_hasta_fecha(
         fecha_hasta,
-        unidad_negocio=unidad_negocio
+        unidad_negocio=unidad_negocio,
+        fecha_desde=fecha_desde
     )
 
     labels = []
@@ -274,10 +282,11 @@ def generar_proyeccion_json(fecha_hasta, unidad_negocio=None):
     })
 
 
-def resumen_proyeccion(fecha_hasta, unidad_negocio=None):
+def resumen_proyeccion(fecha_hasta, unidad_negocio=None, fecha_desde=None):
     data = obtener_proyeccion_hasta_fecha(
         fecha_hasta,
-        unidad_negocio=unidad_negocio
+        unidad_negocio=unidad_negocio,
+        fecha_desde=fecha_desde
     )
 
     total = sum([d['monto'] for d in data], Decimal('0'))
@@ -297,12 +306,13 @@ def resumen_proyeccion(fecha_hasta, unidad_negocio=None):
 # ANALISIS DE PROYECCION
 # ========================
 
-def analisis_proyeccion_recurrentes(fecha_hasta, unidad_negocio=None):
+def analisis_proyeccion_recurrentes(fecha_hasta, unidad_negocio=None, fecha_desde=None):
     """
     Resume la proyección futura separando cuotas/unicos/recurrentes y
     desglosando la carga recurrente por categoría y por unidad.
+    Respeta el rango de fechas de la proyección.
     """
-    eventos = list(_eventos_proyeccion_qs(fecha_hasta, unidad_negocio=unidad_negocio))
+    eventos = list(_eventos_proyeccion_qs(fecha_hasta, unidad_negocio=unidad_negocio, fecha_desde=fecha_desde))
 
     total_recurrentes = Decimal('0')
     total_cuotas = Decimal('0')
