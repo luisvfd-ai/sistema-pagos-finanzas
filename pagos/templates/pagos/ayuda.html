@@ -57,7 +57,9 @@
                         <strong>Novedades ya integradas:</strong> el sistema ahora soporta compromisos en <strong>cuotas</strong>,
                         compromisos <strong>únicos</strong>, gastos <strong>recurrentes mensuales</strong>,
                         selección múltiple con exportación de seleccionados en cuentas por pagar,
-                        categorías recurrentes parametrizables y módulo de <strong>auditoría</strong>.
+                        categorías recurrentes parametrizables, módulo de <strong>auditoría</strong>,
+                        filtro por <strong>tipo de deuda</strong> en reportes, <strong>reportes rápidos</strong>
+                        y exportación de <strong>proyección futura</strong> en CSV, Excel y PDF.
                     </div>
                     <div class="ayuda-tip">
                         <strong>Importante:</strong> el sistema no está pensado solo para registrar pagos.
@@ -92,7 +94,8 @@
                         <li>Entrar a <strong>Alertas</strong> para priorizar vencidos y próximos vencimientos.</li>
                         <li>Trabajar el detalle en <strong>Cuentas por pagar</strong> usando filtros, selección y acciones por fila.</li>
                         <li>Registrar <strong>Pago real</strong> o <strong>abono</strong> cuando la empresa efectivamente pague.</li>
-                        <li>Consultar <strong>Reportes</strong> para análisis por período, unidad o categoría.</li>
+                        <li>Consultar <strong>Reportes</strong> usando filtros avanzados o <strong>reportes rápidos</strong> según la pregunta que quieres responder.</li>
+                        <li>Exportar histórico o proyección cuando necesites priorizar, compartir o preparar tesorería.</li>
                         <li>Usar <strong>Auditoría</strong> cuando sea necesario revisar trazabilidad de cambios o movimientos.</li>
                     </ol>
                 </div>
@@ -185,6 +188,7 @@
                         <li>Un compromiso no se considera totalmente resuelto hasta que el saldo real o el saldo visible del período quede en cero.</li>
                         <li>Registrar un abono no borra el compromiso base: ajusta la lectura operativa y conserva el historial de lo pagado.</li>
                         <li>En recurrentes, el pago real debe asociarse al compromiso recurrente correspondiente.</li>
+                        <li>El sistema distingue entre <strong>saldo total estructural</strong> y <strong>saldo visible operativo</strong>, especialmente en compromisos únicos y recurrentes.</li>
                         <li>Los pagos reales son parte clave de la lógica financiera, porque permiten conciliar eventos y calcular cuánto se ha pagado realmente.</li>
                     </ul>
                 </div>
@@ -195,11 +199,17 @@
                 <div class="card-body">
                     <ul>
                         <li>Permiten analizar pagos reales por período usando filtro de fechas.</li>
-                        <li>Soportan filtro por <strong>unidad de negocio</strong> y por <strong>categoría recurrente</strong>.</li>
-                        <li>Incluyen exportación a <strong>CSV</strong>, <strong>Excel</strong> y <strong>PDF</strong>.</li>
-                        <li>Incorporan proyección futura, análisis de recurrentes y desglose por unidad o categoría.</li>
-                        <li>Son la vista correcta cuando necesitas lectura ejecutiva más completa o análisis por rango de fechas.</li>
+                        <li>Soportan filtro por <strong>unidad de negocio</strong>, <strong>categoría recurrente</strong> y <strong>tipo de deuda</strong>.</li>
+                        <li>El bloque histórico trabaja sobre <strong>pagos reales</strong>; la proyección futura trabaja sobre <strong>eventos pendientes</strong>.</li>
+                        <li>La proyección futura ya respeta el rango del reporte: considera el tramo entre <strong>la fecha desde seleccionada</strong> y <strong>la fecha hasta</strong>, sin retroceder antes de hoy.</li>
+                        <li>Incluyen exportación histórica a <strong>CSV</strong>, <strong>Excel</strong> y <strong>PDF</strong>, y también exportación propia de la <strong>proyección futura</strong> en esos mismos formatos.</li>
+                        <li>Incorporan análisis de recurrentes, desglose por unidad o categoría y lectura por tipo de obligación.</li>
+                        <li>Ahora incluyen <strong>Reportes rápidos</strong>, pensados para responder preguntas frecuentes sin tener que construir todos los filtros manualmente.</li>
                     </ul>
+                    <div class="ayuda-tip mt-2">
+                        <strong>Reportes rápidos actualmente disponibles:</strong> pagos reales del período, unidad con mayor salida,
+                        proyección priorizada, créditos y obligaciones financieras, recurrentes por categoría y calendario futuro.
+                    </div>
                 </div>
             </div>
 
@@ -221,7 +231,10 @@
                     <ul>
                         <li>Permite carga masiva de compromisos y, según configuración, también pagos reales.</li>
                         <li>Primero se genera una <strong>vista previa</strong> antes de confirmar la importación.</li>
-                        <li>Existe historial de importaciones y opción de <strong>reversión</strong> cuando corresponde.</li>
+                        <li>La importación identifica y normaliza el modo del compromiso como <strong>CUOTAS</strong>, <strong>UNICO</strong> o <strong>RECURRENTE</strong>.</li>
+                        <li>En compromisos <strong>en cuotas</strong>, el avance histórico se representa por <strong>cuotas restantes</strong>; por eso la importación evita crear <strong>PagoReal</strong> automático para no duplicar el descuento lógico.</li>
+                        <li>La vista previa puede mostrar el estado <strong>"No crear (cuotas)"</strong> cuando una fila trae pagado pero corresponde a un compromiso en cuotas.</li>
+                        <li>Existe historial de importaciones y opción de <strong>reversión</strong> cuando corresponde. La reversión se bloquea si detecta conciliaciones o trabajo posterior relevante.</li>
                         <li>Conviene respetar siempre la plantilla oficial para evitar errores de estructura o formato.</li>
                         <li>Si el archivo histórico viejo ya trae gastos mensuales cargados como registros puntuales, no es obligatorio convertirlos todos de inmediato al esquema recurrente.</li>
                     </ul>
@@ -247,6 +260,7 @@
                         <li>Registra acciones críticas y cambios relevantes realizados por los usuarios.</li>
                         <li>Permite revisar <strong>quién</strong> hizo un cambio, <strong>cuándo</strong> lo hizo y <strong>qué cambió</strong>.</li>
                         <li>Incluye filtros por búsqueda, acción, módulo, modelo, usuario y rango de fechas.</li>
+                        <li>La vista abre con los registros más recientes y el botón <strong>Limpiar</strong> deja los filtros realmente vacíos.</li>
                         <li>Es especialmente útil para revisar ediciones, eliminaciones, pagos, parametrización, importaciones y conciliaciones.</li>
                         <li>No reemplaza el trabajo operativo: su objetivo es aportar <strong>trazabilidad</strong> y control interno.</li>
                     </ul>
@@ -278,6 +292,8 @@
                         <li>Para gastos mensuales permanentes, prefiere <strong>recurrente mensual</strong>.</li>
                         <li>Antes de confirmar una importación, revisa siempre la vista previa.</li>
                         <li>Usa filtros en cuentas por pagar y reportes para trabajar con vistas más limpias y precisas.</li>
+                        <li>En reportes, distingue siempre entre <strong>histórico pagado</strong> y <strong>proyección futura</strong>: responden preguntas distintas.</li>
+                        <li>Aprovecha los <strong>Reportes rápidos</strong> cuando quieras responder una pregunta de gestión frecuente sin reconstruir filtros manualmente.</li>
                         <li>Si necesitas rastrear un cambio, consulta el módulo de auditoría antes de corregir manualmente.</li>
                     </ul>
                 </div>
@@ -343,6 +359,21 @@
                             <div class="accordion-body">
                                 Sí. En cuentas por pagar, la exportación completa respeta la vista filtrada actual,
                                 y además existe exportación de registros seleccionados cuando usas selección múltiple.
+                                En reportes, tanto el histórico como la proyección respetan los filtros activos al exportar.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqQuickReports">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseQuickReports" aria-expanded="false" aria-controls="faqCollapseQuickReports">
+                                ¿Qué diferencia hay entre un reporte rápido y usar los filtros manuales?
+                            </button>
+                        </h2>
+                        <div id="faqCollapseQuickReports" class="accordion-collapse collapse" aria-labelledby="faqQuickReports" data-bs-parent="#faqAyuda">
+                            <div class="accordion-body">
+                                Los <strong>reportes rápidos</strong> aplican automáticamente combinaciones de fechas y filtros pensadas para preguntas frecuentes.
+                                Después de aplicarlos, puedes ajustar manualmente el rango o los filtros si necesitas mayor precisión.
                             </div>
                         </div>
                     </div>
