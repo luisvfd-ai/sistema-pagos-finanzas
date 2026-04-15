@@ -123,25 +123,31 @@ def calcular_indice_riesgo():
 
 
 # =========================================
-# PROYECCIÓN FUTURA HASTA FECHA
+# PROYECCIÓN FUTURA EN RANGO
 # =========================================
 
 
-def obtener_proyeccion_hasta_fecha(fecha_hasta, unidad_negocio=None):
+def obtener_proyeccion_hasta_fecha(fecha_hasta, unidad_negocio=None, fecha_desde=None):
     """
-    Proyección diaria de egresos futuros hasta una fecha dada.
+    Proyección diaria de egresos futuros dentro de un rango.
 
-    Si se recibe unidad_negocio, filtra solo eventos pendientes
-    pertenecientes a esa unidad.
-
-    Excluye compromisos anulados/inactivos.
+    - Si se recibe ``fecha_desde``, la proyección parte desde esa fecha.
+    - Nunca proyecta hacia atrás: el inicio real es ``max(hoy, fecha_desde)``.
+    - Si se recibe ``unidad_negocio``, filtra solo eventos pendientes de esa unidad.
+    - Excluye compromisos anulados/inactivos.
     """
 
     hoy = date.today()
+    inicio = hoy
+    if fecha_desde:
+        try:
+            inicio = max(hoy, fecha_desde)
+        except Exception:
+            inicio = hoy
 
     eventos = _eventos_operativos_qs().filter(
         estado='pendiente',
-        fecha__gte=hoy,
+        fecha__gte=inicio,
         fecha__lte=fecha_hasta
     ).select_related('pago', 'pago__unidad_negocio_ref').order_by('fecha', 'id')
 
